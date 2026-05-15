@@ -1,27 +1,3 @@
-## Decision: Collection tasks are the workflow entry point
-
-Collection tasks are the primary entry point for reference discovery.
-
-Users describe what they want to find in natural working language.
-
-The system analyzes the task, checks internal tables, detects missing data and prepares discovery queries.
-
-In MVP, discovery is rule-based and controlled from admin.
-
-External search providers are prepared as an integration point but are not called unless explicitly configured.
-
-The system must ask for missing required data before attempting more precise discovery.
-
-## Decision: Discovery candidates are reviewed before becoming sources
-
-Discovery candidates are potential sources found or entered during the discovery workflow.
-
-A candidate does not automatically become a reference source.
-
-It must be accepted manually before it is inserted into Reference Sources.
-
-This prevents noisy or unreliable web results from polluting the evidence base.
-
 ## Decision: Photo evidence stores visual observations, not media files
 
 Photo evidence records store internal visual observations and URLs to visual material.

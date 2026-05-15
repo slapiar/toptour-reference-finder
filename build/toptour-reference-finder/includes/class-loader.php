@@ -48,10 +48,6 @@ class Toptour_Ref_Loader {
 		require_once TOPTOUR_REF_PLUGIN_DIR . 'includes/class-contact-relationships.php';
 		require_once TOPTOUR_REF_PLUGIN_DIR . 'includes/class-points-of-interest.php';
 		require_once TOPTOUR_REF_PLUGIN_DIR . 'includes/class-reference-sources.php';
-		require_once TOPTOUR_REF_PLUGIN_DIR . 'includes/class-discovery-runs.php';
-		require_once TOPTOUR_REF_PLUGIN_DIR . 'includes/class-discovery-candidates.php';
-		require_once TOPTOUR_REF_PLUGIN_DIR . 'includes/class-discovery-provider.php';
-		require_once TOPTOUR_REF_PLUGIN_DIR . 'includes/class-collection-task-resolver.php';
 		require_once TOPTOUR_REF_PLUGIN_DIR . 'includes/class-mail-templates.php';
 		require_once TOPTOUR_REF_PLUGIN_DIR . 'includes/class-mail-queue.php';
 		require_once TOPTOUR_REF_PLUGIN_DIR . 'includes/class-findings.php';

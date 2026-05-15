@@ -34,9 +34,6 @@ $tables = [
 	'toptour_ref_mail_queue',
 	'toptour_ref_findings',
 	'toptour_ref_photo_evidence',
-	'toptour_ref_discovery_runs',
-	'toptour_ref_discovery_candidates',
-	'toptour_ref_discovery_missing_fields',
 ];
 
 $prefix = $wpdb->prefix;
