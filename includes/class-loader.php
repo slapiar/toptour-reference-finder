@@ -36,6 +36,7 @@ class Toptour_Ref_Loader {
 	private static function load_includes() {
 		require_once TOPTOUR_REF_PLUGIN_DIR . 'includes/class-installer.php';
 		require_once TOPTOUR_REF_PLUGIN_DIR . 'includes/class-capabilities.php';
+		require_once TOPTOUR_REF_PLUGIN_DIR . 'includes/class-labels.php';
 		require_once TOPTOUR_REF_PLUGIN_DIR . 'includes/class-collection-tasks.php';
 		require_once TOPTOUR_REF_PLUGIN_DIR . 'includes/class-facilities.php';
 		require_once TOPTOUR_REF_PLUGIN_DIR . 'includes/class-destinations.php';

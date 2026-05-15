@@ -164,7 +164,7 @@ foreach ( $facility_options as $facility_option ) {
 					<td>
 						<select id="poi_type" name="poi_type">
 							<?php foreach ( $allowed_types as $poi_type ) : ?>
-								<option value="<?php echo esc_attr( $poi_type ); ?>" <?php selected( $p->poi_type ?? 'other', $poi_type ); ?>><?php echo esc_html( $poi_type ); ?></option>
+								<option value="<?php echo esc_attr( $poi_type ); ?>" <?php selected( $p->poi_type ?? 'other', $poi_type ); ?>><?php echo esc_html( Toptour_Ref_Labels::poi_type_label( $poi_type ) ); ?></option>
 							<?php endforeach; ?>
 						</select>
 					</td>
@@ -240,7 +240,7 @@ foreach ( $facility_options as $facility_option ) {
 					<td>
 						<select id="poi_status" name="status">
 							<?php foreach ( $allowed_statuses as $status ) : ?>
-								<option value="<?php echo esc_attr( $status ); ?>" <?php selected( $p->status ?? 'draft', $status ); ?>><?php echo esc_html( $status ); ?></option>
+								<option value="<?php echo esc_attr( $status ); ?>" <?php selected( $p->status ?? 'draft', $status ); ?>><?php echo esc_html( Toptour_Ref_Labels::status_label( $status ) ); ?></option>
 							<?php endforeach; ?>
 						</select>
 					</td>
@@ -271,7 +271,7 @@ foreach ( $facility_options as $facility_option ) {
 				<select name="filter_type">
 					<option value=""><?php esc_html_e( '— Typ —', 'toptour-reference-finder' ); ?></option>
 					<?php foreach ( $allowed_types as $poi_type ) : ?>
-						<option value="<?php echo esc_attr( $poi_type ); ?>" <?php selected( $filter_type, $poi_type ); ?>><?php echo esc_html( $poi_type ); ?></option>
+						<option value="<?php echo esc_attr( $poi_type ); ?>" <?php selected( $filter_type, $poi_type ); ?>><?php echo esc_html( Toptour_Ref_Labels::poi_type_label( $poi_type ) ); ?></option>
 					<?php endforeach; ?>
 				</select>
 
@@ -295,7 +295,7 @@ foreach ( $facility_options as $facility_option ) {
 				<select name="filter_status">
 					<option value=""><?php esc_html_e( '— Status —', 'toptour-reference-finder' ); ?></option>
 					<?php foreach ( $allowed_statuses as $status ) : ?>
-						<option value="<?php echo esc_attr( $status ); ?>" <?php selected( $filter_status, $status ); ?>><?php echo esc_html( $status ); ?></option>
+						<option value="<?php echo esc_attr( $status ); ?>" <?php selected( $filter_status, $status ); ?>><?php echo esc_html( Toptour_Ref_Labels::status_label( $status ) ); ?></option>
 					<?php endforeach; ?>
 				</select>
 
@@ -381,12 +381,12 @@ foreach ( $facility_options as $facility_option ) {
 						<tr>
 							<td><?php echo esc_html( $point->id ); ?></td>
 							<td><?php echo esc_html( $point->name ); ?></td>
-							<td><?php echo esc_html( $point->poi_type ); ?></td>
+							<td><?php echo esc_html( Toptour_Ref_Labels::poi_type_label( $point->poi_type ) ); ?></td>
 							<td><?php echo esc_html( $destination_label ); ?></td>
 							<td><?php echo esc_html( $facility_label ); ?></td>
 							<td><?php echo esc_html( $location_label ); ?></td>
 							<td><?php echo esc_html( $gps_label ); ?></td>
-							<td><?php echo esc_html( $point->status ); ?></td>
+							<td><?php echo esc_html( Toptour_Ref_Labels::status_label( $point->status ) ); ?></td>
 							<td><?php echo esc_html( $point->created_at ); ?></td>
 							<td>
 								<a href="<?php echo esc_url( $edit_url ); ?>"><?php esc_html_e( 'Upraviť', 'toptour-reference-finder' ); ?></a>

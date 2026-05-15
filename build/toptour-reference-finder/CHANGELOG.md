@@ -1,4 +1,16 @@
 
+## 0.2.0
+- Added Collection Task Discovery Engine foundation.
+- Added discovery runs table.
+- Added discovery candidates table.
+- Added discovery missing fields table.
+- Added rule-based task resolver for destination, interests, finding areas and expected source type.
+- Added missing data prompt/panel in Collection Tasks workflow.
+- Added search query preparation without automatic external search.
+- Added manual discovery candidate entry and accept-as-source flow.
+- Prepared discovery provider abstraction without active external HTTP calls.
+- Kept discovery controlled, manual and admin-only with no scraping, AI, REST, cron or public output.
+
 ## 0.1.15
 - Added Photo Evidence admin screen.
 - Added manual create and edit support for photo evidence records.

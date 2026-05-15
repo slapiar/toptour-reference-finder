@@ -134,7 +134,7 @@ $interest_types = Toptour_Ref_Interests::get_allowed_types();
 					<td>
 						<select id="interest_type" name="interest_type">
 							<?php foreach ( $interest_types as $interest_type ) : ?>
-								<option value="<?php echo esc_attr( $interest_type ); ?>" <?php selected( $i->interest_type ?? 'other', $interest_type ); ?>><?php echo esc_html( $interest_type ); ?></option>
+								<option value="<?php echo esc_attr( $interest_type ); ?>" <?php selected( $i->interest_type ?? 'other', $interest_type ); ?>><?php echo esc_html( Toptour_Ref_Labels::interest_type_label( $interest_type ) ); ?></option>
 							<?php endforeach; ?>
 						</select>
 					</td>
@@ -162,7 +162,7 @@ $interest_types = Toptour_Ref_Interests::get_allowed_types();
 				<select name="filter_interest_type">
 					<option value=""><?php esc_html_e( '- Typ -', 'toptour-reference-finder' ); ?></option>
 					<?php foreach ( $interest_types as $interest_type ) : ?>
-						<option value="<?php echo esc_attr( $interest_type ); ?>" <?php selected( $filter_interest_type, $interest_type ); ?>><?php echo esc_html( $interest_type ); ?></option>
+						<option value="<?php echo esc_attr( $interest_type ); ?>" <?php selected( $filter_interest_type, $interest_type ); ?>><?php echo esc_html( Toptour_Ref_Labels::interest_type_label( $interest_type ) ); ?></option>
 					<?php endforeach; ?>
 				</select>
 				<select name="filter_is_active">
@@ -205,7 +205,7 @@ $interest_types = Toptour_Ref_Interests::get_allowed_types();
 						<td><?php echo esc_html( $interest->id ); ?></td>
 						<td><?php echo esc_html( $interest->interest_key ); ?></td>
 						<td><?php echo esc_html( $interest->name ); ?></td>
-						<td><?php echo esc_html( $interest->interest_type ); ?></td>
+						<td><?php echo esc_html( Toptour_Ref_Labels::interest_type_label( $interest->interest_type ) ); ?></td>
 						<td><?php echo esc_html( (int) $interest->is_active === 1 ? 'áno' : 'nie' ); ?></td>
 						<td><?php echo esc_html( $count ); ?></td>
 						<td><?php echo esc_html( $interest->created_at ); ?></td>

@@ -1,3 +1,15 @@
+## Decision: Internal enum values remain stable English keys
+
+Internal enum values stored in plugin tables remain stable English keys.
+
+Admin UI may show localized labels (for example Slovak), but this is only a presentation layer.
+
+Forms must keep original English enum values in option value attributes.
+
+Localization must never rewrite persisted enum values in existing records.
+
+This keeps data stable for migrations, filtering, integrations and future automation.
+
 ## Decision: Collection tasks are the workflow entry point
 
 Collection tasks are the primary entry point for reference discovery.

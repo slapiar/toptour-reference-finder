@@ -38,7 +38,7 @@ class Toptour_Ref_Collection_Tasks {
 	 * @return string[]
 	 */
 	public static function get_allowed_target_types() {
-		return [ 'general', 'facility', 'destination', 'offer', 'source' ];
+		return [ 'general', 'facility', 'destination', 'point_of_interest', 'contact', 'interest', 'offer', 'source', 'collection_task' ];
 	}
 
 	/**
@@ -65,7 +65,35 @@ class Toptour_Ref_Collection_Tasks {
 	 * @return string[]
 	 */
 	public static function get_allowed_source_types() {
-		return [ '', 'review', 'guest_photo', 'official_photo', 'video', 'blog', 'forum', 'platform_rating', 'mixed' ];
+		return [ '', 'review', 'guest_photo', 'official_photo', 'video', 'blog', 'forum', 'platform_rating', 'mixed', 'other' ];
+	}
+
+	/**
+	 * Update task last run timestamp and optional status.
+	 *
+	 * @param int         $task_id      Task ID.
+	 * @param string|null $task_status  Optional task status.
+	 * @return bool
+	 */
+	public static function touch_task_run( $task_id, $task_status = null ) {
+		global $wpdb;
+
+		$data = [
+			'last_run_at' => current_time( 'mysql' ),
+			'updated_at'  => current_time( 'mysql' ),
+		];
+
+		if ( null !== $task_status && in_array( $task_status, self::get_allowed_statuses(), true ) ) {
+			$data['task_status'] = $task_status;
+		}
+
+		$result = $wpdb->update(
+			self::get_table_name(),
+			$data,
+			[ 'id' => absint( $task_id ) ]
+		);
+
+		return $result !== false;
 	}
 
 	/**

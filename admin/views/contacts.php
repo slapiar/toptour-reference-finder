@@ -303,7 +303,7 @@ $relationship_counts_map = Toptour_Ref_Contact_Relationships::get_relationship_c
 					<td>
 						<select id="contact_type" name="contact_type">
 							<?php foreach ( $contact_types as $contact_type ) : ?>
-								<option value="<?php echo esc_attr( $contact_type ); ?>" <?php selected( $c->contact_type ?? 'person', $contact_type ); ?>><?php echo esc_html( $contact_type ); ?></option>
+								<option value="<?php echo esc_attr( $contact_type ); ?>" <?php selected( $c->contact_type ?? 'person', $contact_type ); ?>><?php echo esc_html( Toptour_Ref_Labels::contact_type_label( $contact_type ) ); ?></option>
 							<?php endforeach; ?>
 						</select>
 					</td>
@@ -361,7 +361,7 @@ $relationship_counts_map = Toptour_Ref_Contact_Relationships::get_relationship_c
 					<td>
 						<select id="status" name="status">
 							<?php foreach ( $statuses as $status ) : ?>
-								<option value="<?php echo esc_attr( $status ); ?>" <?php selected( $c->status ?? 'draft', $status ); ?>><?php echo esc_html( $status ); ?></option>
+								<option value="<?php echo esc_attr( $status ); ?>" <?php selected( $c->status ?? 'draft', $status ); ?>><?php echo esc_html( Toptour_Ref_Labels::status_label( $status ) ); ?></option>
 							<?php endforeach; ?>
 						</select>
 					</td>
@@ -371,7 +371,7 @@ $relationship_counts_map = Toptour_Ref_Contact_Relationships::get_relationship_c
 					<td>
 						<select id="trust_level" name="trust_level">
 							<?php foreach ( $trust_levels as $trust_level ) : ?>
-								<option value="<?php echo esc_attr( $trust_level ); ?>" <?php selected( $c->trust_level ?? 'unknown', $trust_level ); ?>><?php echo esc_html( $trust_level ); ?></option>
+								<option value="<?php echo esc_attr( $trust_level ); ?>" <?php selected( $c->trust_level ?? 'unknown', $trust_level ); ?>><?php echo esc_html( Toptour_Ref_Labels::trust_level_label( $trust_level ) ); ?></option>
 							<?php endforeach; ?>
 						</select>
 					</td>
@@ -398,7 +398,7 @@ $relationship_counts_map = Toptour_Ref_Contact_Relationships::get_relationship_c
 					<td>
 						<select id="resident_type" name="resident_type">
 							<?php foreach ( $resident_types as $resident_type ) : ?>
-								<option value="<?php echo esc_attr( $resident_type ); ?>" <?php selected( $r->resident_type ?? 'local_helper', $resident_type ); ?>><?php echo esc_html( $resident_type ); ?></option>
+								<option value="<?php echo esc_attr( $resident_type ); ?>" <?php selected( $r->resident_type ?? 'local_helper', $resident_type ); ?>><?php echo esc_html( Toptour_Ref_Labels::resident_type_label( $resident_type ) ); ?></option>
 							<?php endforeach; ?>
 						</select>
 					</td>
@@ -408,7 +408,7 @@ $relationship_counts_map = Toptour_Ref_Contact_Relationships::get_relationship_c
 					<td>
 						<select id="availability_status" name="availability_status">
 							<?php foreach ( $availability_statuses as $availability_status ) : ?>
-								<option value="<?php echo esc_attr( $availability_status ); ?>" <?php selected( $r->availability_status ?? 'unknown', $availability_status ); ?>><?php echo esc_html( $availability_status ); ?></option>
+								<option value="<?php echo esc_attr( $availability_status ); ?>" <?php selected( $r->availability_status ?? 'unknown', $availability_status ); ?>><?php echo esc_html( Toptour_Ref_Labels::availability_status_label( $availability_status ) ); ?></option>
 							<?php endforeach; ?>
 						</select>
 					</td>
@@ -418,7 +418,7 @@ $relationship_counts_map = Toptour_Ref_Contact_Relationships::get_relationship_c
 					<td>
 						<select id="verification_status" name="verification_status">
 							<?php foreach ( $verification_statuses as $verification_status ) : ?>
-								<option value="<?php echo esc_attr( $verification_status ); ?>" <?php selected( $r->verification_status ?? 'unverified', $verification_status ); ?>><?php echo esc_html( $verification_status ); ?></option>
+								<option value="<?php echo esc_attr( $verification_status ); ?>" <?php selected( $r->verification_status ?? 'unverified', $verification_status ); ?>><?php echo esc_html( Toptour_Ref_Labels::verification_status_label( $verification_status ) ); ?></option>
 							<?php endforeach; ?>
 						</select>
 					</td>
@@ -428,7 +428,7 @@ $relationship_counts_map = Toptour_Ref_Contact_Relationships::get_relationship_c
 					<td>
 						<select id="badge_status" name="badge_status">
 							<?php foreach ( $badge_statuses as $badge_status ) : ?>
-								<option value="<?php echo esc_attr( $badge_status ); ?>" <?php selected( $r->badge_status ?? 'none', $badge_status ); ?>><?php echo esc_html( $badge_status ); ?></option>
+								<option value="<?php echo esc_attr( $badge_status ); ?>" <?php selected( $r->badge_status ?? 'none', $badge_status ); ?>><?php echo esc_html( Toptour_Ref_Labels::badge_status_label( $badge_status ) ); ?></option>
 							<?php endforeach; ?>
 						</select>
 					</td>
@@ -480,7 +480,7 @@ $relationship_counts_map = Toptour_Ref_Contact_Relationships::get_relationship_c
 							<td>
 								<select name="influence_rows[<?php echo esc_attr( $index ); ?>][target_type]">
 									<?php foreach ( $influence_target_types as $target_type ) : ?>
-										<option value="<?php echo esc_attr( $target_type ); ?>" <?php selected( $influence_row['target_type'] ?? 'general', $target_type ); ?>><?php echo esc_html( $target_type ); ?></option>
+										<option value="<?php echo esc_attr( $target_type ); ?>" <?php selected( $influence_row['target_type'] ?? 'general', $target_type ); ?>><?php echo esc_html( Toptour_Ref_Labels::target_type_label( $target_type ) ); ?></option>
 									<?php endforeach; ?>
 								</select>
 							</td>
@@ -495,28 +495,28 @@ $relationship_counts_map = Toptour_Ref_Contact_Relationships::get_relationship_c
 								<select name="influence_rows[<?php echo esc_attr( $index ); ?>][influence_type]">
 									<option value=""><?php esc_html_e( '- none -', 'toptour-reference-finder' ); ?></option>
 									<?php foreach ( $influence_types as $influence_type ) : ?>
-										<option value="<?php echo esc_attr( $influence_type ); ?>" <?php selected( $influence_row['influence_type'] ?? '', $influence_type ); ?>><?php echo esc_html( $influence_type ); ?></option>
+										<option value="<?php echo esc_attr( $influence_type ); ?>" <?php selected( $influence_row['influence_type'] ?? '', $influence_type ); ?>><?php echo esc_html( Toptour_Ref_Labels::influence_type_label( $influence_type ) ); ?></option>
 									<?php endforeach; ?>
 								</select>
 							</td>
 							<td>
 								<select name="influence_rows[<?php echo esc_attr( $index ); ?>][influence_level]">
 									<?php foreach ( $influence_levels as $influence_level ) : ?>
-										<option value="<?php echo esc_attr( $influence_level ); ?>" <?php selected( $influence_row['influence_level'] ?? 'unknown', $influence_level ); ?>><?php echo esc_html( $influence_level ); ?></option>
+										<option value="<?php echo esc_attr( $influence_level ); ?>" <?php selected( $influence_row['influence_level'] ?? 'unknown', $influence_level ); ?>><?php echo esc_html( Toptour_Ref_Labels::trust_level_label( $influence_level ) ); ?></option>
 									<?php endforeach; ?>
 								</select>
 							</td>
 							<td>
 								<select name="influence_rows[<?php echo esc_attr( $index ); ?>][usefulness_level]">
 									<?php foreach ( $usefulness_levels as $usefulness_level ) : ?>
-										<option value="<?php echo esc_attr( $usefulness_level ); ?>" <?php selected( $influence_row['usefulness_level'] ?? 'unknown', $usefulness_level ); ?>><?php echo esc_html( $usefulness_level ); ?></option>
+										<option value="<?php echo esc_attr( $usefulness_level ); ?>" <?php selected( $influence_row['usefulness_level'] ?? 'unknown', $usefulness_level ); ?>><?php echo esc_html( Toptour_Ref_Labels::usefulness_level_label( $usefulness_level ) ); ?></option>
 									<?php endforeach; ?>
 								</select>
 							</td>
 							<td>
 								<select name="influence_rows[<?php echo esc_attr( $index ); ?>][mutuality_level]">
 									<?php foreach ( $mutuality_levels as $mutuality_level ) : ?>
-										<option value="<?php echo esc_attr( $mutuality_level ); ?>" <?php selected( $influence_row['mutuality_level'] ?? 'unknown', $mutuality_level ); ?>><?php echo esc_html( $mutuality_level ); ?></option>
+										<option value="<?php echo esc_attr( $mutuality_level ); ?>" <?php selected( $influence_row['mutuality_level'] ?? 'unknown', $mutuality_level ); ?>><?php echo esc_html( Toptour_Ref_Labels::mutuality_level_label( $mutuality_level ) ); ?></option>
 									<?php endforeach; ?>
 								</select>
 							</td>
@@ -568,21 +568,21 @@ $relationship_counts_map = Toptour_Ref_Contact_Relationships::get_relationship_c
 							<td>
 								<select name="relationship_rows[<?php echo esc_attr( $index ); ?>][relationship_type]">
 									<?php foreach ( $relationship_types as $relationship_type ) : ?>
-										<option value="<?php echo esc_attr( $relationship_type ); ?>" <?php selected( $relationship_row['relationship_type'] ?? 'knows', $relationship_type ); ?>><?php echo esc_html( $relationship_type ); ?></option>
+										<option value="<?php echo esc_attr( $relationship_type ); ?>" <?php selected( $relationship_row['relationship_type'] ?? 'knows', $relationship_type ); ?>><?php echo esc_html( Toptour_Ref_Labels::relationship_type_label( $relationship_type ) ); ?></option>
 									<?php endforeach; ?>
 								</select>
 							</td>
 							<td>
 								<select name="relationship_rows[<?php echo esc_attr( $index ); ?>][relationship_strength]">
 									<?php foreach ( $relationship_strengths as $relationship_strength ) : ?>
-										<option value="<?php echo esc_attr( $relationship_strength ); ?>" <?php selected( $relationship_row['relationship_strength'] ?? 'medium', $relationship_strength ); ?>><?php echo esc_html( $relationship_strength ); ?></option>
+										<option value="<?php echo esc_attr( $relationship_strength ); ?>" <?php selected( $relationship_row['relationship_strength'] ?? 'medium', $relationship_strength ); ?>><?php echo esc_html( Toptour_Ref_Labels::relationship_strength_label( $relationship_strength ) ); ?></option>
 									<?php endforeach; ?>
 								</select>
 							</td>
 							<td>
 								<select name="relationship_rows[<?php echo esc_attr( $index ); ?>][mutuality_level]">
 									<?php foreach ( $relationship_mutuality_levels as $relationship_mutuality_level ) : ?>
-										<option value="<?php echo esc_attr( $relationship_mutuality_level ); ?>" <?php selected( $relationship_row['mutuality_level'] ?? 'unknown', $relationship_mutuality_level ); ?>><?php echo esc_html( $relationship_mutuality_level ); ?></option>
+										<option value="<?php echo esc_attr( $relationship_mutuality_level ); ?>" <?php selected( $relationship_row['mutuality_level'] ?? 'unknown', $relationship_mutuality_level ); ?>><?php echo esc_html( Toptour_Ref_Labels::mutuality_level_label( $relationship_mutuality_level ) ); ?></option>
 									<?php endforeach; ?>
 								</select>
 							</td>
@@ -623,19 +623,19 @@ $relationship_counts_map = Toptour_Ref_Contact_Relationships::get_relationship_c
 				<select name="filter_contact_type">
 					<option value=""><?php esc_html_e( '- Typ -', 'toptour-reference-finder' ); ?></option>
 					<?php foreach ( $contact_types as $contact_type ) : ?>
-						<option value="<?php echo esc_attr( $contact_type ); ?>" <?php selected( $filter_contact_type, $contact_type ); ?>><?php echo esc_html( $contact_type ); ?></option>
+						<option value="<?php echo esc_attr( $contact_type ); ?>" <?php selected( $filter_contact_type, $contact_type ); ?>><?php echo esc_html( Toptour_Ref_Labels::contact_type_label( $contact_type ) ); ?></option>
 					<?php endforeach; ?>
 				</select>
 				<select name="filter_status">
 					<option value=""><?php esc_html_e( '- Status -', 'toptour-reference-finder' ); ?></option>
 					<?php foreach ( $statuses as $status ) : ?>
-						<option value="<?php echo esc_attr( $status ); ?>" <?php selected( $filter_status, $status ); ?>><?php echo esc_html( $status ); ?></option>
+						<option value="<?php echo esc_attr( $status ); ?>" <?php selected( $filter_status, $status ); ?>><?php echo esc_html( Toptour_Ref_Labels::status_label( $status ) ); ?></option>
 					<?php endforeach; ?>
 				</select>
 				<select name="filter_trust_level">
 					<option value=""><?php esc_html_e( '- Dôvera -', 'toptour-reference-finder' ); ?></option>
 					<?php foreach ( $trust_levels as $trust_level ) : ?>
-						<option value="<?php echo esc_attr( $trust_level ); ?>" <?php selected( $filter_trust_level, $trust_level ); ?>><?php echo esc_html( $trust_level ); ?></option>
+						<option value="<?php echo esc_attr( $trust_level ); ?>" <?php selected( $filter_trust_level, $trust_level ); ?>><?php echo esc_html( Toptour_Ref_Labels::trust_level_label( $trust_level ) ); ?></option>
 					<?php endforeach; ?>
 				</select>
 				<input type="text" name="filter_country" value="<?php echo esc_attr( $filter_country ); ?>" placeholder="<?php esc_attr_e( 'Krajina', 'toptour-reference-finder' ); ?>">
@@ -708,7 +708,7 @@ $relationship_counts_map = Toptour_Ref_Contact_Relationships::get_relationship_c
 					<tr>
 						<td><?php echo esc_html( $contact->id ); ?></td>
 						<td><?php echo esc_html( $contact->display_name ); ?></td>
-						<td><?php echo esc_html( $contact->contact_type ); ?></td>
+						<td><?php echo esc_html( Toptour_Ref_Labels::contact_type_label( $contact->contact_type ) ); ?></td>
 						<td><?php echo esc_html( $contact->email ); ?></td>
 						<td><?php echo esc_html( $contact->phone ); ?></td>
 						<td><?php echo esc_html( '' !== $location ? $location : '—' ); ?></td>
@@ -716,8 +716,8 @@ $relationship_counts_map = Toptour_Ref_Contact_Relationships::get_relationship_c
 						<td><?php echo esc_html( $influence_label ); ?></td>
 						<td><?php echo esc_html( $relationship_count > 0 ? $relationship_label : '—' ); ?></td>
 						<td><?php echo esc_html( $has_profile ? 'áno' : 'nie' ); ?></td>
-						<td><?php echo esc_html( $contact->trust_level ); ?></td>
-						<td><?php echo esc_html( $contact->status ); ?></td>
+						<td><?php echo esc_html( Toptour_Ref_Labels::trust_level_label( $contact->trust_level ) ); ?></td>
+						<td><?php echo esc_html( Toptour_Ref_Labels::status_label( $contact->status ) ); ?></td>
 						<td><?php echo esc_html( $contact->created_at ); ?></td>
 						<td>
 							<a href="<?php echo esc_url( $edit_url ); ?>"><?php esc_html_e( 'Upraviť', 'toptour-reference-finder' ); ?></a>

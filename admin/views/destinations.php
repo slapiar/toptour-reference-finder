@@ -147,7 +147,7 @@ $allowed_statuses = Toptour_Ref_Destinations::get_allowed_statuses();
 					<td>
 						<select id="dest_type" name="destination_type">
 							<?php foreach ( $allowed_types as $type ) : ?>
-								<option value="<?php echo esc_attr( $type ); ?>" <?php selected( $d->destination_type ?? '', $type ); ?>><?php echo esc_html( $type === '' ? '- none -' : $type ); ?></option>
+								<option value="<?php echo esc_attr( $type ); ?>" <?php selected( $d->destination_type ?? '', $type ); ?>><?php echo esc_html( '' === $type ? '— žiadny —' : Toptour_Ref_Labels::destination_type_label( $type ) ); ?></option>
 							<?php endforeach; ?>
 						</select>
 					</td>
@@ -169,7 +169,7 @@ $allowed_statuses = Toptour_Ref_Destinations::get_allowed_statuses();
 					<td>
 						<select id="dest_status" name="status">
 							<?php foreach ( $allowed_statuses as $status ) : ?>
-								<option value="<?php echo esc_attr( $status ); ?>" <?php selected( $d->status ?? 'draft', $status ); ?>><?php echo esc_html( $status ); ?></option>
+								<option value="<?php echo esc_attr( $status ); ?>" <?php selected( $d->status ?? 'draft', $status ); ?>><?php echo esc_html( Toptour_Ref_Labels::status_label( $status ) ); ?></option>
 							<?php endforeach; ?>
 						</select>
 					</td>
@@ -196,13 +196,13 @@ $allowed_statuses = Toptour_Ref_Destinations::get_allowed_statuses();
 				<select name="filter_type">
 					<option value=""><?php esc_html_e( '- Typ destinácie -', 'toptour-reference-finder' ); ?></option>
 					<?php foreach ( $allowed_types as $type ) : if ( $type === '' ) { continue; } ?>
-						<option value="<?php echo esc_attr( $type ); ?>" <?php selected( $filter_type, $type ); ?>><?php echo esc_html( $type ); ?></option>
+						<option value="<?php echo esc_attr( $type ); ?>" <?php selected( $filter_type, $type ); ?>><?php echo esc_html( Toptour_Ref_Labels::destination_type_label( $type ) ); ?></option>
 					<?php endforeach; ?>
 				</select>
 				<select name="filter_status">
 					<option value=""><?php esc_html_e( '- Status -', 'toptour-reference-finder' ); ?></option>
 					<?php foreach ( $allowed_statuses as $status ) : ?>
-						<option value="<?php echo esc_attr( $status ); ?>" <?php selected( $filter_status, $status ); ?>><?php echo esc_html( $status ); ?></option>
+						<option value="<?php echo esc_attr( $status ); ?>" <?php selected( $filter_status, $status ); ?>><?php echo esc_html( Toptour_Ref_Labels::status_label( $status ) ); ?></option>
 					<?php endforeach; ?>
 				</select>
 				<input type="text" name="filter_country" value="<?php echo esc_attr( $filter_country ); ?>" placeholder="<?php esc_attr_e( 'Krajina', 'toptour-reference-finder' ); ?>">
@@ -262,9 +262,9 @@ $allowed_statuses = Toptour_Ref_Destinations::get_allowed_statuses();
 						<td><?php echo esc_html( $destination->name ); ?></td>
 						<td><?php echo esc_html( $destination->country ); ?></td>
 						<td><?php echo esc_html( $destination->region ); ?></td>
-						<td><?php echo esc_html( $destination->destination_type ); ?></td>
+						<td><?php echo esc_html( Toptour_Ref_Labels::destination_type_label( $destination->destination_type ) ); ?></td>
 						<td><?php echo esc_html( $destination->seasonality ); ?></td>
-						<td><?php echo esc_html( $destination->status ); ?></td>
+						<td><?php echo esc_html( Toptour_Ref_Labels::status_label( $destination->status ) ); ?></td>
 						<td><?php echo esc_html( $count ); ?></td>
 						<td><?php echo esc_html( $destination->created_at ); ?></td>
 						<td>

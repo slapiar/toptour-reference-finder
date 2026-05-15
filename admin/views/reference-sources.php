@@ -281,7 +281,7 @@ $mail_template_options = [
 					<td>
 						<select id="source_type" name="source_type">
 							<?php foreach ( $allowed_source_types as $source_type ) : ?>
-								<option value="<?php echo esc_attr( $source_type ); ?>" <?php selected( $s->source_type ?? 'review', $source_type ); ?>><?php echo esc_html( $source_type ); ?></option>
+								<option value="<?php echo esc_attr( $source_type ); ?>" <?php selected( $s->source_type ?? 'review', $source_type ); ?>><?php echo esc_html( Toptour_Ref_Labels::source_type_label( $source_type ) ); ?></option>
 							<?php endforeach; ?>
 						</select>
 					</td>
@@ -291,7 +291,7 @@ $mail_template_options = [
 					<td>
 						<select id="source_origin" name="source_origin">
 							<?php foreach ( $allowed_source_origins as $source_origin ) : ?>
-								<option value="<?php echo esc_attr( $source_origin ); ?>" <?php selected( $s->source_origin ?? 'unknown', $source_origin ); ?>><?php echo esc_html( $source_origin ); ?></option>
+								<option value="<?php echo esc_attr( $source_origin ); ?>" <?php selected( $s->source_origin ?? 'unknown', $source_origin ); ?>><?php echo esc_html( Toptour_Ref_Labels::source_origin_label( $source_origin ) ); ?></option>
 							<?php endforeach; ?>
 						</select>
 					</td>
@@ -325,7 +325,7 @@ $mail_template_options = [
 					<td>
 						<select id="target_type" name="target_type">
 							<?php foreach ( $allowed_target_types as $target_type ) : ?>
-								<option value="<?php echo esc_attr( $target_type ); ?>" <?php selected( $s->target_type ?? 'general', $target_type ); ?>><?php echo esc_html( $target_type ); ?></option>
+								<option value="<?php echo esc_attr( $target_type ); ?>" <?php selected( $s->target_type ?? 'general', $target_type ); ?>><?php echo esc_html( Toptour_Ref_Labels::target_type_label( $target_type ) ); ?></option>
 							<?php endforeach; ?>
 						</select>
 					</td>
@@ -347,7 +347,7 @@ $mail_template_options = [
 					<td>
 						<select id="credibility_level" name="credibility_level">
 							<?php foreach ( $allowed_credibility_levels as $credibility_level ) : ?>
-								<option value="<?php echo esc_attr( $credibility_level ); ?>" <?php selected( $s->credibility_level ?? 'unknown', $credibility_level ); ?>><?php echo esc_html( $credibility_level ); ?></option>
+								<option value="<?php echo esc_attr( $credibility_level ); ?>" <?php selected( $s->credibility_level ?? 'unknown', $credibility_level ); ?>><?php echo esc_html( Toptour_Ref_Labels::credibility_level_label( $credibility_level ) ); ?></option>
 							<?php endforeach; ?>
 						</select>
 					</td>
@@ -365,7 +365,7 @@ $mail_template_options = [
 					<td>
 						<select id="verification_method" name="verification_method">
 							<?php foreach ( $allowed_verification_methods as $verification_method ) : ?>
-								<option value="<?php echo esc_attr( $verification_method ); ?>" <?php selected( $s->verification_method ?? 'manual', $verification_method ); ?>><?php echo esc_html( $verification_method ); ?></option>
+								<option value="<?php echo esc_attr( $verification_method ); ?>" <?php selected( $s->verification_method ?? 'manual', $verification_method ); ?>><?php echo esc_html( Toptour_Ref_Labels::verification_method_label( $verification_method ) ); ?></option>
 							<?php endforeach; ?>
 						</select>
 					</td>
@@ -387,7 +387,7 @@ $mail_template_options = [
 					<td>
 						<select id="suggested_credibility_level" name="suggested_credibility_level">
 							<?php foreach ( $allowed_suggested_levels as $suggested_level ) : ?>
-								<option value="<?php echo esc_attr( $suggested_level ); ?>" <?php selected( $s->suggested_credibility_level ?? '', $suggested_level ); ?>><?php echo esc_html( $suggested_level === '' ? '—' : $suggested_level ); ?></option>
+								<option value="<?php echo esc_attr( $suggested_level ); ?>" <?php selected( $s->suggested_credibility_level ?? '', $suggested_level ); ?>><?php echo esc_html( Toptour_Ref_Labels::suggested_credibility_level_label( $suggested_level ) ); ?></option>
 							<?php endforeach; ?>
 						</select>
 					</td>
@@ -401,7 +401,7 @@ $mail_template_options = [
 					<td>
 						<select id="suggestion_status" name="suggestion_status">
 							<?php foreach ( $allowed_suggestion_statuses as $suggestion_status ) : ?>
-								<option value="<?php echo esc_attr( $suggestion_status ); ?>" <?php selected( $s->suggestion_status ?? 'none', $suggestion_status ); ?>><?php echo esc_html( $suggestion_status ); ?></option>
+								<option value="<?php echo esc_attr( $suggestion_status ); ?>" <?php selected( $s->suggestion_status ?? 'none', $suggestion_status ); ?>><?php echo esc_html( Toptour_Ref_Labels::suggestion_status_label( $suggestion_status ) ); ?></option>
 							<?php endforeach; ?>
 						</select>
 					</td>
@@ -427,7 +427,7 @@ $mail_template_options = [
 					<td>
 						<select id="search_priority" name="search_priority">
 							<?php foreach ( $allowed_search_priorities as $search_priority ) : ?>
-								<option value="<?php echo esc_attr( $search_priority ); ?>" <?php selected( $s->search_priority ?? 'normal', $search_priority ); ?>><?php echo esc_html( $search_priority ); ?></option>
+								<option value="<?php echo esc_attr( $search_priority ); ?>" <?php selected( $s->search_priority ?? 'normal', $search_priority ); ?>><?php echo esc_html( Toptour_Ref_Labels::search_priority_label( $search_priority ) ); ?></option>
 							<?php endforeach; ?>
 						</select>
 					</td>
@@ -437,7 +437,7 @@ $mail_template_options = [
 					<td>
 						<select id="next_action" name="next_action">
 							<?php foreach ( $allowed_next_actions as $next_action ) : ?>
-								<option value="<?php echo esc_attr( $next_action ); ?>" <?php selected( $s->next_action ?? 'review_source', $next_action ); ?>><?php echo esc_html( $next_action ); ?></option>
+								<option value="<?php echo esc_attr( $next_action ); ?>" <?php selected( $s->next_action ?? 'review_source', $next_action ); ?>><?php echo esc_html( Toptour_Ref_Labels::next_action_label( $next_action ) ); ?></option>
 							<?php endforeach; ?>
 						</select>
 					</td>
@@ -447,7 +447,7 @@ $mail_template_options = [
 					<td>
 						<select id="validation_status" name="validation_status">
 							<?php foreach ( $allowed_validation_statuses as $validation_status ) : ?>
-								<option value="<?php echo esc_attr( $validation_status ); ?>" <?php selected( $s->validation_status ?? 'new', $validation_status ); ?>><?php echo esc_html( $validation_status ); ?></option>
+								<option value="<?php echo esc_attr( $validation_status ); ?>" <?php selected( $s->validation_status ?? 'new', $validation_status ); ?>><?php echo esc_html( Toptour_Ref_Labels::validation_status_label( $validation_status ) ); ?></option>
 							<?php endforeach; ?>
 						</select>
 					</td>
@@ -457,7 +457,7 @@ $mail_template_options = [
 					<td>
 						<select id="access_status" name="access_status">
 							<?php foreach ( $allowed_access_statuses as $access_status ) : ?>
-								<option value="<?php echo esc_attr( $access_status ); ?>" <?php selected( $s->access_status ?? 'unknown', $access_status ); ?>><?php echo esc_html( $access_status ); ?></option>
+								<option value="<?php echo esc_attr( $access_status ); ?>" <?php selected( $s->access_status ?? 'unknown', $access_status ); ?>><?php echo esc_html( Toptour_Ref_Labels::access_status_label( $access_status ) ); ?></option>
 							<?php endforeach; ?>
 						</select>
 					</td>
@@ -522,70 +522,70 @@ $mail_template_options = [
 				<select name="filter_source_type">
 					<option value=""><?php esc_html_e( '— Typ —', 'toptour-reference-finder' ); ?></option>
 					<?php foreach ( $allowed_source_types as $source_type ) : ?>
-						<option value="<?php echo esc_attr( $source_type ); ?>" <?php selected( $filter_source_type, $source_type ); ?>><?php echo esc_html( $source_type ); ?></option>
+						<option value="<?php echo esc_attr( $source_type ); ?>" <?php selected( $filter_source_type, $source_type ); ?>><?php echo esc_html( Toptour_Ref_Labels::source_type_label( $source_type ) ); ?></option>
 					<?php endforeach; ?>
 				</select>
 
 				<select name="filter_source_origin">
 					<option value=""><?php esc_html_e( '— Pôvod —', 'toptour-reference-finder' ); ?></option>
 					<?php foreach ( $allowed_source_origins as $source_origin ) : ?>
-						<option value="<?php echo esc_attr( $source_origin ); ?>" <?php selected( $filter_source_origin, $source_origin ); ?>><?php echo esc_html( $source_origin ); ?></option>
+						<option value="<?php echo esc_attr( $source_origin ); ?>" <?php selected( $filter_source_origin, $source_origin ); ?>><?php echo esc_html( Toptour_Ref_Labels::source_origin_label( $source_origin ) ); ?></option>
 					<?php endforeach; ?>
 				</select>
 
 				<select name="filter_target_type">
 					<option value=""><?php esc_html_e( '— Cieľ —', 'toptour-reference-finder' ); ?></option>
 					<?php foreach ( $allowed_target_types as $target_type ) : ?>
-						<option value="<?php echo esc_attr( $target_type ); ?>" <?php selected( $filter_target_type, $target_type ); ?>><?php echo esc_html( $target_type ); ?></option>
+						<option value="<?php echo esc_attr( $target_type ); ?>" <?php selected( $filter_target_type, $target_type ); ?>><?php echo esc_html( Toptour_Ref_Labels::target_type_label( $target_type ) ); ?></option>
 					<?php endforeach; ?>
 				</select>
 
 				<select name="filter_credibility_level">
 					<option value=""><?php esc_html_e( '— Dôveryhodnosť —', 'toptour-reference-finder' ); ?></option>
 					<?php foreach ( $allowed_credibility_levels as $credibility_level ) : ?>
-						<option value="<?php echo esc_attr( $credibility_level ); ?>" <?php selected( $filter_credibility_level, $credibility_level ); ?>><?php echo esc_html( $credibility_level ); ?></option>
+						<option value="<?php echo esc_attr( $credibility_level ); ?>" <?php selected( $filter_credibility_level, $credibility_level ); ?>><?php echo esc_html( Toptour_Ref_Labels::credibility_level_label( $credibility_level ) ); ?></option>
 					<?php endforeach; ?>
 				</select>
 
 				<select name="filter_suggested_credibility_level">
 					<option value=""><?php esc_html_e( '— Návrh dôveryhodnosti —', 'toptour-reference-finder' ); ?></option>
 					<?php foreach ( $allowed_suggested_levels as $suggested_level ) : if ( $suggested_level === '' ) { continue; } ?>
-						<option value="<?php echo esc_attr( $suggested_level ); ?>" <?php selected( $filter_suggested_credibility_level, $suggested_level ); ?>><?php echo esc_html( $suggested_level ); ?></option>
+						<option value="<?php echo esc_attr( $suggested_level ); ?>" <?php selected( $filter_suggested_credibility_level, $suggested_level ); ?>><?php echo esc_html( Toptour_Ref_Labels::suggested_credibility_level_label( $suggested_level ) ); ?></option>
 					<?php endforeach; ?>
 				</select>
 
 				<select name="filter_suggestion_status">
 					<option value=""><?php esc_html_e( '— Stav návrhu —', 'toptour-reference-finder' ); ?></option>
 					<?php foreach ( $allowed_suggestion_statuses as $suggestion_status ) : ?>
-						<option value="<?php echo esc_attr( $suggestion_status ); ?>" <?php selected( $filter_suggestion_status, $suggestion_status ); ?>><?php echo esc_html( $suggestion_status ); ?></option>
+						<option value="<?php echo esc_attr( $suggestion_status ); ?>" <?php selected( $filter_suggestion_status, $suggestion_status ); ?>><?php echo esc_html( Toptour_Ref_Labels::suggestion_status_label( $suggestion_status ) ); ?></option>
 					<?php endforeach; ?>
 				</select>
 
 				<select name="filter_search_priority">
 					<option value=""><?php esc_html_e( '— Priorita —', 'toptour-reference-finder' ); ?></option>
 					<?php foreach ( $allowed_search_priorities as $search_priority ) : ?>
-						<option value="<?php echo esc_attr( $search_priority ); ?>" <?php selected( $filter_search_priority, $search_priority ); ?>><?php echo esc_html( $search_priority ); ?></option>
+						<option value="<?php echo esc_attr( $search_priority ); ?>" <?php selected( $filter_search_priority, $search_priority ); ?>><?php echo esc_html( Toptour_Ref_Labels::search_priority_label( $search_priority ) ); ?></option>
 					<?php endforeach; ?>
 				</select>
 
 				<select name="filter_next_action">
 					<option value=""><?php esc_html_e( '— Ďalší krok —', 'toptour-reference-finder' ); ?></option>
 					<?php foreach ( $allowed_next_actions as $next_action ) : ?>
-						<option value="<?php echo esc_attr( $next_action ); ?>" <?php selected( $filter_next_action, $next_action ); ?>><?php echo esc_html( $next_action ); ?></option>
+						<option value="<?php echo esc_attr( $next_action ); ?>" <?php selected( $filter_next_action, $next_action ); ?>><?php echo esc_html( Toptour_Ref_Labels::next_action_label( $next_action ) ); ?></option>
 					<?php endforeach; ?>
 				</select>
 
 				<select name="filter_validation_status">
 					<option value=""><?php esc_html_e( '— Validácia —', 'toptour-reference-finder' ); ?></option>
 					<?php foreach ( $allowed_validation_statuses as $validation_status ) : ?>
-						<option value="<?php echo esc_attr( $validation_status ); ?>" <?php selected( $filter_validation_status, $validation_status ); ?>><?php echo esc_html( $validation_status ); ?></option>
+						<option value="<?php echo esc_attr( $validation_status ); ?>" <?php selected( $filter_validation_status, $validation_status ); ?>><?php echo esc_html( Toptour_Ref_Labels::validation_status_label( $validation_status ) ); ?></option>
 					<?php endforeach; ?>
 				</select>
 
 				<select name="filter_access_status">
 					<option value=""><?php esc_html_e( '— Prístup —', 'toptour-reference-finder' ); ?></option>
 					<?php foreach ( $allowed_access_statuses as $access_status ) : ?>
-						<option value="<?php echo esc_attr( $access_status ); ?>" <?php selected( $filter_access_status, $access_status ); ?>><?php echo esc_html( $access_status ); ?></option>
+						<option value="<?php echo esc_attr( $access_status ); ?>" <?php selected( $filter_access_status, $access_status ); ?>><?php echo esc_html( Toptour_Ref_Labels::access_status_label( $access_status ) ); ?></option>
 					<?php endforeach; ?>
 				</select>
 
@@ -643,26 +643,24 @@ $mail_template_options = [
 							'toptour_archive_source_' . $source->id
 						);
 						$target_label = Toptour_Ref_Reference_Sources::get_target_label( $source->target_type, (int) $source->target_id );
-						$suggestion_label = trim( $source->suggested_credibility_level . ' / ' . $source->suggestion_status, ' /' );
+						$suggestion_label = trim( Toptour_Ref_Labels::suggested_credibility_level_label( $source->suggested_credibility_level ) . ' / ' . Toptour_Ref_Labels::suggestion_status_label( $source->suggestion_status ), ' /' );
 						if ( $suggestion_label === '' ) {
 							$suggestion_label = '—';
-						} elseif ( $source->suggestion_status === 'manager_review' ) {
-							$suggestion_label .= ' (čaká na manažéra)';
 						}
 					?>
 						<tr>
 							<td><?php echo esc_html( $source->id ); ?></td>
 							<td><?php echo esc_html( $source->source_title ); ?></td>
-							<td><?php echo esc_html( $source->source_type ); ?></td>
-							<td><?php echo esc_html( $source->source_origin ); ?></td>
+							<td><?php echo esc_html( Toptour_Ref_Labels::source_type_label( $source->source_type ) ); ?></td>
+							<td><?php echo esc_html( Toptour_Ref_Labels::source_origin_label( $source->source_origin ) ); ?></td>
 							<td><?php echo esc_html( $source->source_platform ); ?></td>
 							<td><?php echo esc_html( $target_label ); ?></td>
-							<td><?php echo esc_html( $source->credibility_level ); ?></td>
+							<td><?php echo esc_html( Toptour_Ref_Labels::credibility_level_label( $source->credibility_level ) ); ?></td>
 							<td><?php echo esc_html( $suggestion_label ); ?></td>
-							<td><?php echo esc_html( $source->search_priority ); ?></td>
-							<td><?php echo esc_html( $source->next_action ); ?></td>
-							<td><?php echo esc_html( $source->validation_status ); ?></td>
-							<td><?php echo esc_html( $source->access_status ); ?></td>
+							<td><?php echo esc_html( Toptour_Ref_Labels::search_priority_label( $source->search_priority ) ); ?></td>
+							<td><?php echo esc_html( Toptour_Ref_Labels::next_action_label( $source->next_action ) ); ?></td>
+							<td><?php echo esc_html( Toptour_Ref_Labels::validation_status_label( $source->validation_status ) ); ?></td>
+							<td><?php echo esc_html( Toptour_Ref_Labels::access_status_label( $source->access_status ) ); ?></td>
 							<td><?php echo esc_html( $source->captured_at ? $source->captured_at : '—' ); ?></td>
 							<td>
 								<a href="<?php echo esc_url( $edit_url ); ?>"><?php esc_html_e( 'Upraviť', 'toptour-reference-finder' ); ?></a>

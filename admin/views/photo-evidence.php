@@ -190,7 +190,7 @@ function toptour_photo_textarea( $field, $record, $default = '' ) {
 					<td>
 						<select name="target_type" id="target_type">
 							<?php foreach ( Toptour_Ref_Photo_Evidence::get_allowed_target_types() as $item ) : ?>
-								<option value="<?php echo esc_attr( $item ); ?>" <?php selected( $target_type, $item ); ?>><?php echo esc_html( $item ); ?></option>
+								<option value="<?php echo esc_attr( $item ); ?>" <?php selected( $target_type, $item ); ?>><?php echo esc_html( Toptour_Ref_Labels::target_type_label( $item ) ); ?></option>
 							<?php endforeach; ?>
 						</select>
 					</td>
@@ -208,7 +208,7 @@ function toptour_photo_textarea( $field, $record, $default = '' ) {
 					<td>
 						<select name="photo_type" id="photo_type">
 							<?php foreach ( Toptour_Ref_Photo_Evidence::get_allowed_photo_types() as $item ) : ?>
-								<option value="<?php echo esc_attr( $item ); ?>" <?php selected( $photo_type, $item ); ?>><?php echo esc_html( $item ); ?></option>
+								<option value="<?php echo esc_attr( $item ); ?>" <?php selected( $photo_type, $item ); ?>><?php echo esc_html( Toptour_Ref_Labels::photo_type_label( $item ) ); ?></option>
 							<?php endforeach; ?>
 						</select>
 					</td>
@@ -218,7 +218,7 @@ function toptour_photo_textarea( $field, $record, $default = '' ) {
 					<td>
 						<select name="comparison_category" id="comparison_category">
 							<?php foreach ( Toptour_Ref_Photo_Evidence::get_allowed_comparison_categories() as $item ) : ?>
-								<option value="<?php echo esc_attr( $item ); ?>" <?php selected( $comparison_category, $item ); ?>><?php echo esc_html( $item ); ?></option>
+								<option value="<?php echo esc_attr( $item ); ?>" <?php selected( $comparison_category, $item ); ?>><?php echo esc_html( Toptour_Ref_Labels::comparison_category_label( $item ) ); ?></option>
 							<?php endforeach; ?>
 						</select>
 					</td>
@@ -229,7 +229,7 @@ function toptour_photo_textarea( $field, $record, $default = '' ) {
 						<select name="visual_area" id="visual_area">
 							<option value=""><?php esc_html_e( '— neurčená —', 'toptour-reference-finder' ); ?></option>
 							<?php foreach ( Toptour_Ref_Photo_Evidence::get_allowed_visual_areas() as $item ) : ?>
-								<option value="<?php echo esc_attr( $item ); ?>" <?php selected( $visual_area, $item ); ?>><?php echo esc_html( $item ); ?></option>
+								<option value="<?php echo esc_attr( $item ); ?>" <?php selected( $visual_area, $item ); ?>><?php echo esc_html( Toptour_Ref_Labels::visual_area_label( $item ) ); ?></option>
 							<?php endforeach; ?>
 						</select>
 					</td>
@@ -239,7 +239,7 @@ function toptour_photo_textarea( $field, $record, $default = '' ) {
 					<td>
 						<select name="verification_status" id="verification_status">
 							<?php foreach ( Toptour_Ref_Photo_Evidence::get_allowed_verification_statuses() as $item ) : ?>
-								<option value="<?php echo esc_attr( $item ); ?>" <?php selected( $verification_status, $item ); ?>><?php echo esc_html( $item ); ?></option>
+								<option value="<?php echo esc_attr( $item ); ?>" <?php selected( $verification_status, $item ); ?>><?php echo esc_html( Toptour_Ref_Labels::verification_status_label( $item ) ); ?></option>
 							<?php endforeach; ?>
 						</select>
 					</td>
@@ -249,7 +249,7 @@ function toptour_photo_textarea( $field, $record, $default = '' ) {
 					<td>
 						<select name="signal_strength" id="signal_strength">
 							<?php foreach ( Toptour_Ref_Photo_Evidence::get_allowed_signal_strengths() as $item ) : ?>
-								<option value="<?php echo esc_attr( $item ); ?>" <?php selected( $signal_strength, $item ); ?>><?php echo esc_html( $item ); ?></option>
+								<option value="<?php echo esc_attr( $item ); ?>" <?php selected( $signal_strength, $item ); ?>><?php echo esc_html( Toptour_Ref_Labels::signal_strength_label( $item ) ); ?></option>
 							<?php endforeach; ?>
 						</select>
 					</td>
@@ -351,37 +351,37 @@ function toptour_photo_textarea( $field, $record, $default = '' ) {
 				<select name="photo_type">
 					<option value=""><?php esc_html_e( 'Typ', 'toptour-reference-finder' ); ?></option>
 					<?php foreach ( Toptour_Ref_Photo_Evidence::get_allowed_photo_types() as $item ) : ?>
-						<option value="<?php echo esc_attr( $item ); ?>" <?php selected( $filter_photo_type, $item ); ?>><?php echo esc_html( $item ); ?></option>
+						<option value="<?php echo esc_attr( $item ); ?>" <?php selected( $filter_photo_type, $item ); ?>><?php echo esc_html( Toptour_Ref_Labels::photo_type_label( $item ) ); ?></option>
 					<?php endforeach; ?>
 				</select>
 				<select name="comparison_category">
 					<option value=""><?php esc_html_e( 'Porovnanie', 'toptour-reference-finder' ); ?></option>
 					<?php foreach ( Toptour_Ref_Photo_Evidence::get_allowed_comparison_categories() as $item ) : ?>
-						<option value="<?php echo esc_attr( $item ); ?>" <?php selected( $filter_comparison_category, $item ); ?>><?php echo esc_html( $item ); ?></option>
+						<option value="<?php echo esc_attr( $item ); ?>" <?php selected( $filter_comparison_category, $item ); ?>><?php echo esc_html( Toptour_Ref_Labels::comparison_category_label( $item ) ); ?></option>
 					<?php endforeach; ?>
 				</select>
 				<select name="visual_area">
 					<option value=""><?php esc_html_e( 'Oblasť', 'toptour-reference-finder' ); ?></option>
 					<?php foreach ( Toptour_Ref_Photo_Evidence::get_allowed_visual_areas() as $item ) : ?>
-						<option value="<?php echo esc_attr( $item ); ?>" <?php selected( $filter_visual_area, $item ); ?>><?php echo esc_html( $item ); ?></option>
+						<option value="<?php echo esc_attr( $item ); ?>" <?php selected( $filter_visual_area, $item ); ?>><?php echo esc_html( Toptour_Ref_Labels::visual_area_label( $item ) ); ?></option>
 					<?php endforeach; ?>
 				</select>
 				<select name="verification_status">
 					<option value=""><?php esc_html_e( 'Stav', 'toptour-reference-finder' ); ?></option>
 					<?php foreach ( Toptour_Ref_Photo_Evidence::get_allowed_verification_statuses() as $item ) : ?>
-						<option value="<?php echo esc_attr( $item ); ?>" <?php selected( $filter_verification_status, $item ); ?>><?php echo esc_html( $item ); ?></option>
+						<option value="<?php echo esc_attr( $item ); ?>" <?php selected( $filter_verification_status, $item ); ?>><?php echo esc_html( Toptour_Ref_Labels::verification_status_label( $item ) ); ?></option>
 					<?php endforeach; ?>
 				</select>
 				<select name="signal_strength">
 					<option value=""><?php esc_html_e( 'Sila', 'toptour-reference-finder' ); ?></option>
 					<?php foreach ( Toptour_Ref_Photo_Evidence::get_allowed_signal_strengths() as $item ) : ?>
-						<option value="<?php echo esc_attr( $item ); ?>" <?php selected( $filter_signal_strength, $item ); ?>><?php echo esc_html( $item ); ?></option>
+						<option value="<?php echo esc_attr( $item ); ?>" <?php selected( $filter_signal_strength, $item ); ?>><?php echo esc_html( Toptour_Ref_Labels::signal_strength_label( $item ) ); ?></option>
 					<?php endforeach; ?>
 				</select>
 				<select name="target_type">
 					<option value=""><?php esc_html_e( 'Typ cieľa', 'toptour-reference-finder' ); ?></option>
 					<?php foreach ( Toptour_Ref_Photo_Evidence::get_allowed_target_types() as $item ) : ?>
-						<option value="<?php echo esc_attr( $item ); ?>" <?php selected( $filter_target_type, $item ); ?>><?php echo esc_html( $item ); ?></option>
+						<option value="<?php echo esc_attr( $item ); ?>" <?php selected( $filter_target_type, $item ); ?>><?php echo esc_html( Toptour_Ref_Labels::target_type_label( $item ) ); ?></option>
 					<?php endforeach; ?>
 				</select>
 				<input type="number" name="source_id" min="0" placeholder="<?php esc_attr_e( 'Source ID', 'toptour-reference-finder' ); ?>" value="<?php echo $filter_source_id > 0 ? esc_attr( $filter_source_id ) : ''; ?>" style="width:90px;">
@@ -444,14 +444,14 @@ function toptour_photo_textarea( $field, $record, $default = '' ) {
 						<tr>
 							<td><?php echo esc_html( $row->id ); ?></td>
 							<td><a href="<?php echo esc_url( $edit_url ); ?>"><?php echo esc_html( $row->evidence_title ); ?></a></td>
-							<td><?php echo esc_html( $row->photo_type ); ?></td>
-							<td><?php echo esc_html( $row->comparison_category ); ?></td>
-							<td><?php echo esc_html( $row->visual_area !== '' ? $row->visual_area : '—' ); ?></td>
+							<td><?php echo esc_html( Toptour_Ref_Labels::photo_type_label( $row->photo_type ) ); ?></td>
+							<td><?php echo esc_html( Toptour_Ref_Labels::comparison_category_label( $row->comparison_category ) ); ?></td>
+							<td><?php echo esc_html( $row->visual_area !== '' ? Toptour_Ref_Labels::visual_area_label( $row->visual_area ) : '—' ); ?></td>
 							<td><?php echo esc_html( Toptour_Ref_Photo_Evidence::get_source_label( $row->source_id ) ); ?></td>
 							<td><?php echo esc_html( Toptour_Ref_Photo_Evidence::get_finding_label( $row->finding_id ) ); ?></td>
 							<td><?php echo esc_html( Toptour_Ref_Photo_Evidence::get_target_label( $row->target_type, $row->target_id ) ); ?></td>
-							<td><?php echo esc_html( $row->signal_strength ); ?></td>
-							<td><?php echo esc_html( $row->verification_status ); ?></td>
+							<td><?php echo esc_html( Toptour_Ref_Labels::signal_strength_label( $row->signal_strength ) ); ?></td>
+							<td><?php echo esc_html( Toptour_Ref_Labels::verification_status_label( $row->verification_status ) ); ?></td>
 							<td>
 								<?php if ( ! empty( $row->evidence_url ) ) : ?>
 									<a href="<?php echo esc_url( $row->evidence_url ); ?>" target="_blank" rel="noopener noreferrer">URL</a>

@@ -193,7 +193,7 @@ $destination_labels_by_facility = Toptour_Ref_Facility_Destinations::get_destina
 					<td>
 						<select id="fac_type" name="facility_type">
 							<?php foreach ( $allowed_types as $t ) : ?>
-								<option value="<?php echo esc_attr( $t ); ?>" <?php selected( $f->facility_type ?? '', $t ); ?>><?php echo esc_html( $t === '' ? '— žiadny —' : $t ); ?></option>
+								<option value="<?php echo esc_attr( $t ); ?>" <?php selected( $f->facility_type ?? '', $t ); ?>><?php echo esc_html( '' === $t ? '— žiadny —' : Toptour_Ref_Labels::facility_type_label( $t ) ); ?></option>
 							<?php endforeach; ?>
 						</select>
 					</td>
@@ -227,7 +227,7 @@ $destination_labels_by_facility = Toptour_Ref_Facility_Destinations::get_destina
 					<td>
 						<select id="fac_status" name="status">
 							<?php foreach ( $allowed_statuses as $s ) : ?>
-								<option value="<?php echo esc_attr( $s ); ?>" <?php selected( $f->status ?? 'draft', $s ); ?>><?php echo esc_html( $s ); ?></option>
+								<option value="<?php echo esc_attr( $s ); ?>" <?php selected( $f->status ?? 'draft', $s ); ?>><?php echo esc_html( Toptour_Ref_Labels::status_label( $s ) ); ?></option>
 							<?php endforeach; ?>
 						</select>
 					</td>
@@ -292,13 +292,13 @@ $destination_labels_by_facility = Toptour_Ref_Facility_Destinations::get_destina
 				<select name="filter_type">
 					<option value=""><?php esc_html_e( '— Typ —', 'toptour-reference-finder' ); ?></option>
 					<?php foreach ( $allowed_types as $t ) : if ( $t === '' ) continue; ?>
-						<option value="<?php echo esc_attr( $t ); ?>" <?php selected( $filter_type, $t ); ?>><?php echo esc_html( $t ); ?></option>
+						<option value="<?php echo esc_attr( $t ); ?>" <?php selected( $filter_type, $t ); ?>><?php echo esc_html( Toptour_Ref_Labels::facility_type_label( $t ) ); ?></option>
 					<?php endforeach; ?>
 				</select>
 				<select name="filter_status">
 					<option value=""><?php esc_html_e( '— Status —', 'toptour-reference-finder' ); ?></option>
 					<?php foreach ( $allowed_statuses as $s ) : ?>
-						<option value="<?php echo esc_attr( $s ); ?>" <?php selected( $filter_status, $s ); ?>><?php echo esc_html( $s ); ?></option>
+						<option value="<?php echo esc_attr( $s ); ?>" <?php selected( $filter_status, $s ); ?>><?php echo esc_html( Toptour_Ref_Labels::status_label( $s ) ); ?></option>
 					<?php endforeach; ?>
 				</select>
 				<input type="text" name="filter_country" value="<?php echo esc_attr( $filter_country ); ?>" placeholder="<?php esc_attr_e( 'Krajina', 'toptour-reference-finder' ); ?>" style="width:120px">
@@ -345,11 +345,11 @@ $destination_labels_by_facility = Toptour_Ref_Facility_Destinations::get_destina
 					<td><?php echo esc_html( $fac->id ); ?></td>
 					<td><?php echo esc_html( $fac->name ); ?></td>
 					<td><?php echo esc_html( $destination_labels ? implode( ', ', $destination_labels ) : '—' ); ?></td>
-					<td><?php echo esc_html( $fac->facility_type ); ?></td>
+					<td><?php echo esc_html( Toptour_Ref_Labels::facility_type_label( $fac->facility_type ) ); ?></td>
 					<td><?php echo esc_html( $fac->country ); ?></td>
 					<td><?php echo esc_html( $fac->region ); ?></td>
 					<td><?php echo esc_html( $fac->city ); ?></td>
-					<td><?php echo esc_html( $fac->status ); ?></td>
+					<td><?php echo esc_html( Toptour_Ref_Labels::status_label( $fac->status ) ); ?></td>
 					<td><?php echo esc_html( $fac->created_at ); ?></td>
 					<td>
 						<a href="<?php echo esc_url( $edit_url ); ?>"><?php esc_html_e( 'Upraviť', 'toptour-reference-finder' ); ?></a>

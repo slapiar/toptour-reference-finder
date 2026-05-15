@@ -179,7 +179,7 @@ $patterns = Toptour_Ref_Findings::get_active_signal_patterns_for_select();
 		<td>
 			<select name="target_type" id="target_type">
 				<?php foreach ( Toptour_Ref_Findings::get_allowed_target_types() as $tt ) : ?>
-					<option value="<?php echo esc_attr( $tt ); ?>" <?php selected( $f_ttype, $tt ); ?>><?php echo esc_html( $tt ); ?></option>
+					<option value="<?php echo esc_attr( $tt ); ?>" <?php selected( $f_ttype, $tt ); ?>><?php echo esc_html( Toptour_Ref_Labels::target_type_label( $tt ) ); ?></option>
 				<?php endforeach; ?>
 			</select>
 		</td>
@@ -212,7 +212,7 @@ $patterns = Toptour_Ref_Findings::get_active_signal_patterns_for_select();
 		<td>
 			<select name="finding_type" id="finding_type">
 				<?php foreach ( Toptour_Ref_Findings::get_allowed_finding_types() as $ft ) : ?>
-					<option value="<?php echo esc_attr( $ft ); ?>" <?php selected( $f_ftype, $ft ); ?>><?php echo esc_html( $ft ); ?></option>
+					<option value="<?php echo esc_attr( $ft ); ?>" <?php selected( $f_ftype, $ft ); ?>><?php echo esc_html( Toptour_Ref_Labels::finding_type_label( $ft ) ); ?></option>
 				<?php endforeach; ?>
 			</select>
 		</td>
@@ -223,7 +223,7 @@ $patterns = Toptour_Ref_Findings::get_active_signal_patterns_for_select();
 			<select name="finding_area" id="finding_area">
 				<option value=""><?php esc_html_e( '— neurčená —', 'toptour-reference-finder' ); ?></option>
 				<?php foreach ( Toptour_Ref_Findings::get_allowed_finding_areas() as $fa ) : ?>
-					<option value="<?php echo esc_attr( $fa ); ?>" <?php selected( $f_farea, $fa ); ?>><?php echo esc_html( $fa ); ?></option>
+					<option value="<?php echo esc_attr( $fa ); ?>" <?php selected( $f_farea, $fa ); ?>><?php echo esc_html( Toptour_Ref_Labels::finding_area_label( $fa ) ); ?></option>
 				<?php endforeach; ?>
 			</select>
 		</td>
@@ -233,7 +233,7 @@ $patterns = Toptour_Ref_Findings::get_active_signal_patterns_for_select();
 		<td>
 			<select name="signal_strength" id="signal_strength">
 				<?php foreach ( Toptour_Ref_Findings::get_allowed_signal_strengths() as $ss ) : ?>
-					<option value="<?php echo esc_attr( $ss ); ?>" <?php selected( $f_strength, $ss ); ?>><?php echo esc_html( $ss ); ?></option>
+					<option value="<?php echo esc_attr( $ss ); ?>" <?php selected( $f_strength, $ss ); ?>><?php echo esc_html( Toptour_Ref_Labels::signal_strength_label( $ss ) ); ?></option>
 				<?php endforeach; ?>
 			</select>
 		</td>
@@ -243,7 +243,7 @@ $patterns = Toptour_Ref_Findings::get_active_signal_patterns_for_select();
 		<td>
 			<select name="repetition_level" id="repetition_level">
 				<?php foreach ( Toptour_Ref_Findings::get_allowed_repetition_levels() as $rl ) : ?>
-					<option value="<?php echo esc_attr( $rl ); ?>" <?php selected( $f_repetition, $rl ); ?>><?php echo esc_html( $rl ); ?></option>
+					<option value="<?php echo esc_attr( $rl ); ?>" <?php selected( $f_repetition, $rl ); ?>><?php echo esc_html( Toptour_Ref_Labels::repetition_level_label( $rl ) ); ?></option>
 				<?php endforeach; ?>
 			</select>
 		</td>
@@ -253,7 +253,7 @@ $patterns = Toptour_Ref_Findings::get_active_signal_patterns_for_select();
 		<td>
 			<select name="verification_status" id="verification_status">
 				<?php foreach ( Toptour_Ref_Findings::get_allowed_verification_statuses() as $vs ) : ?>
-					<option value="<?php echo esc_attr( $vs ); ?>" <?php selected( $f_vstatus, $vs ); ?>><?php echo esc_html( $vs ); ?></option>
+					<option value="<?php echo esc_attr( $vs ); ?>" <?php selected( $f_vstatus, $vs ); ?>><?php echo esc_html( Toptour_Ref_Labels::verification_status_label( $vs ) ); ?></option>
 				<?php endforeach; ?>
 			</select>
 		</td>
@@ -268,7 +268,7 @@ $patterns = Toptour_Ref_Findings::get_active_signal_patterns_for_select();
 		<td>
 			<select name="evidence_type" id="evidence_type">
 				<?php foreach ( Toptour_Ref_Findings::get_allowed_evidence_types() as $et ) : ?>
-					<option value="<?php echo esc_attr( $et ); ?>" <?php selected( $f_etype, $et ); ?>><?php echo esc_html( $et ); ?></option>
+					<option value="<?php echo esc_attr( $et ); ?>" <?php selected( $f_etype, $et ); ?>><?php echo esc_html( Toptour_Ref_Labels::evidence_type_label( $et ) ); ?></option>
 				<?php endforeach; ?>
 			</select>
 		</td>
@@ -363,43 +363,43 @@ $base_url    = admin_url( 'admin.php?page=toptour-references-findings' );
 	<select name="finding_type">
 		<option value=""><?php esc_html_e( 'Všetky typy', 'toptour-reference-finder' ); ?></option>
 		<?php foreach ( Toptour_Ref_Findings::get_allowed_finding_types() as $ft ) : ?>
-			<option value="<?php echo esc_attr( $ft ); ?>" <?php selected( $filter_type, $ft ); ?>><?php echo esc_html( $ft ); ?></option>
+			<option value="<?php echo esc_attr( $ft ); ?>" <?php selected( $filter_type, $ft ); ?>><?php echo esc_html( Toptour_Ref_Labels::finding_type_label( $ft ) ); ?></option>
 		<?php endforeach; ?>
 	</select>
 	<select name="finding_area">
 		<option value=""><?php esc_html_e( 'Všetky oblasti', 'toptour-reference-finder' ); ?></option>
 		<?php foreach ( Toptour_Ref_Findings::get_allowed_finding_areas() as $fa ) : ?>
-			<option value="<?php echo esc_attr( $fa ); ?>" <?php selected( $filter_area, $fa ); ?>><?php echo esc_html( $fa ); ?></option>
+			<option value="<?php echo esc_attr( $fa ); ?>" <?php selected( $filter_area, $fa ); ?>><?php echo esc_html( Toptour_Ref_Labels::finding_area_label( $fa ) ); ?></option>
 		<?php endforeach; ?>
 	</select>
 	<select name="signal_strength">
 		<option value=""><?php esc_html_e( 'Sila signálu', 'toptour-reference-finder' ); ?></option>
 		<?php foreach ( Toptour_Ref_Findings::get_allowed_signal_strengths() as $ss ) : ?>
-			<option value="<?php echo esc_attr( $ss ); ?>" <?php selected( $filter_strength, $ss ); ?>><?php echo esc_html( $ss ); ?></option>
+			<option value="<?php echo esc_attr( $ss ); ?>" <?php selected( $filter_strength, $ss ); ?>><?php echo esc_html( Toptour_Ref_Labels::signal_strength_label( $ss ) ); ?></option>
 		<?php endforeach; ?>
 	</select>
 	<select name="repetition_level">
 		<option value=""><?php esc_html_e( 'Opakovanie', 'toptour-reference-finder' ); ?></option>
 		<?php foreach ( Toptour_Ref_Findings::get_allowed_repetition_levels() as $rl ) : ?>
-			<option value="<?php echo esc_attr( $rl ); ?>" <?php selected( $filter_rep, $rl ); ?>><?php echo esc_html( $rl ); ?></option>
+			<option value="<?php echo esc_attr( $rl ); ?>" <?php selected( $filter_rep, $rl ); ?>><?php echo esc_html( Toptour_Ref_Labels::repetition_level_label( $rl ) ); ?></option>
 		<?php endforeach; ?>
 	</select>
 	<select name="verification_status">
 		<option value=""><?php esc_html_e( 'Stav overenia', 'toptour-reference-finder' ); ?></option>
 		<?php foreach ( Toptour_Ref_Findings::get_allowed_verification_statuses() as $vs ) : ?>
-			<option value="<?php echo esc_attr( $vs ); ?>" <?php selected( $filter_vstatus, $vs ); ?>><?php echo esc_html( $vs ); ?></option>
+			<option value="<?php echo esc_attr( $vs ); ?>" <?php selected( $filter_vstatus, $vs ); ?>><?php echo esc_html( Toptour_Ref_Labels::verification_status_label( $vs ) ); ?></option>
 		<?php endforeach; ?>
 	</select>
 	<select name="evidence_type">
 		<option value=""><?php esc_html_e( 'Typ dôkazu', 'toptour-reference-finder' ); ?></option>
 		<?php foreach ( Toptour_Ref_Findings::get_allowed_evidence_types() as $et ) : ?>
-			<option value="<?php echo esc_attr( $et ); ?>" <?php selected( $filter_etype, $et ); ?>><?php echo esc_html( $et ); ?></option>
+			<option value="<?php echo esc_attr( $et ); ?>" <?php selected( $filter_etype, $et ); ?>><?php echo esc_html( Toptour_Ref_Labels::evidence_type_label( $et ) ); ?></option>
 		<?php endforeach; ?>
 	</select>
 	<select name="target_type">
 		<option value=""><?php esc_html_e( 'Typ cieľa', 'toptour-reference-finder' ); ?></option>
 		<?php foreach ( Toptour_Ref_Findings::get_allowed_target_types() as $tt ) : ?>
-			<option value="<?php echo esc_attr( $tt ); ?>" <?php selected( $filter_ttype, $tt ); ?>><?php echo esc_html( $tt ); ?></option>
+			<option value="<?php echo esc_attr( $tt ); ?>" <?php selected( $filter_ttype, $tt ); ?>><?php echo esc_html( Toptour_Ref_Labels::target_type_label( $tt ) ); ?></option>
 		<?php endforeach; ?>
 	</select>
 	<input type="number" name="source_id" min="0" placeholder="<?php esc_attr_e( 'Source ID', 'toptour-reference-finder' ); ?>" value="<?php echo $filter_source > 0 ? esc_attr( $filter_source ) : ''; ?>" style="width:90px;">
@@ -442,7 +442,7 @@ $base_url    = admin_url( 'admin.php?page=toptour-references-findings' );
 	$edit_url      = add_query_arg( [ 'page' => 'toptour-references-findings', 'action' => 'edit', 'finding_id' => $row->id ], admin_url( 'admin.php' ) );
 	$archive_url   = wp_nonce_url( add_query_arg( [ 'page' => 'toptour-references-findings', 'action' => 'archive', 'finding_id' => $row->id ], admin_url( 'admin.php' ) ), 'toptour_archive_finding_' . $row->id );
 
-	$evidence_cell = esc_html( $row->evidence_type );
+	$evidence_cell = esc_html( Toptour_Ref_Labels::evidence_type_label( $row->evidence_type ) );
 	if ( ! empty( $row->evidence_url ) ) {
 		$evidence_cell .= ' <a href="' . esc_url( $row->evidence_url ) . '" target="_blank" rel="noopener noreferrer">URL</a>';
 	}
@@ -453,14 +453,14 @@ $base_url    = admin_url( 'admin.php?page=toptour-references-findings' );
 <tr>
 	<td><?php echo esc_html( $row->id ); ?></td>
 	<td><a href="<?php echo esc_url( $edit_url ); ?>"><?php echo esc_html( $row->finding_title ); ?></a></td>
-	<td><?php echo esc_html( $row->finding_type ); ?></td>
-	<td><?php echo esc_html( $row->finding_area ?: '—' ); ?></td>
+	<td><?php echo esc_html( Toptour_Ref_Labels::finding_type_label( $row->finding_type ) ); ?></td>
+	<td><?php echo esc_html( $row->finding_area ? Toptour_Ref_Labels::finding_area_label( $row->finding_area ) : '—' ); ?></td>
 	<td><?php echo esc_html( $source_label ); ?></td>
 	<td><?php echo esc_html( $target_label ); ?></td>
 	<td><?php echo esc_html( $pattern_label ); ?></td>
-	<td><?php echo esc_html( $row->signal_strength ); ?></td>
-	<td><?php echo esc_html( $row->repetition_level ); ?></td>
-	<td><?php echo esc_html( $row->verification_status ); ?></td>
+	<td><?php echo esc_html( Toptour_Ref_Labels::signal_strength_label( $row->signal_strength ) ); ?></td>
+	<td><?php echo esc_html( Toptour_Ref_Labels::repetition_level_label( $row->repetition_level ) ); ?></td>
+	<td><?php echo esc_html( Toptour_Ref_Labels::verification_status_label( $row->verification_status ) ); ?></td>
 	<td><?php echo wp_kses( $evidence_cell, [ 'a' => [ 'href' => [], 'target' => [], 'rel' => [] ], 'br' => [], 'small' => [] ] ); ?></td>
 	<td><?php echo esc_html( $row->created_at ); ?></td>
 	<td>

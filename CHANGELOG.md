@@ -1,4 +1,11 @@
 
+## 0.2.1
+- Added centralized admin label localization layer for internal enum values.
+- Added `Toptour_Ref_Labels` helper with grouped Slovak labels and safe fallback humanization.
+- Localized enum labels across Collection Tasks, Reference Sources, Findings, Photo Evidence, Contacts, Points of Interest, Interests, Facilities and Destinations admin screens.
+- Kept database enum keys and stored values unchanged (English internal values remain canonical).
+- Kept DB schema version unchanged.
+
 ## 0.2.0
 - Added Collection Task Discovery Engine foundation.
 - Added discovery runs table.

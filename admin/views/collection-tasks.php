@@ -394,7 +394,7 @@ if ( $edit_task ) {
 					<td>
 						<select id="target_type" name="target_type">
 							<?php foreach ( $allowed_target_types as $tt ) : ?>
-								<option value="<?php echo esc_attr( $tt ); ?>" <?php selected( $f->target_type ?? 'general', $tt ); ?>><?php echo esc_html( $tt ); ?></option>
+								<option value="<?php echo esc_attr( $tt ); ?>" <?php selected( $f->target_type ?? 'general', $tt ); ?>><?php echo esc_html( Toptour_Ref_Labels::target_type_label( $tt ) ); ?></option>
 							<?php endforeach; ?>
 						</select>
 					</td>
@@ -416,7 +416,7 @@ if ( $edit_task ) {
 					<td>
 						<select id="expected_source_type" name="expected_source_type">
 							<?php foreach ( $allowed_source_types as $st ) : ?>
-								<option value="<?php echo esc_attr( $st ); ?>" <?php selected( $f->expected_source_type ?? '', $st ); ?>><?php echo esc_html( '' === $st ? '— ziadny —' : $st ); ?></option>
+								<option value="<?php echo esc_attr( $st ); ?>" <?php selected( $f->expected_source_type ?? '', $st ); ?>><?php echo esc_html( Toptour_Ref_Labels::expected_source_type_label( $st ) ); ?></option>
 							<?php endforeach; ?>
 						</select>
 					</td>
@@ -426,7 +426,7 @@ if ( $edit_task ) {
 					<td>
 						<select id="task_status" name="task_status">
 							<?php foreach ( $allowed_statuses as $status_item ) : ?>
-								<option value="<?php echo esc_attr( $status_item ); ?>" <?php selected( $f->task_status ?? 'pending', $status_item ); ?>><?php echo esc_html( $status_item ); ?></option>
+								<option value="<?php echo esc_attr( $status_item ); ?>" <?php selected( $f->task_status ?? 'pending', $status_item ); ?>><?php echo esc_html( Toptour_Ref_Labels::task_status_label( $status_item ) ); ?></option>
 							<?php endforeach; ?>
 						</select>
 					</td>
@@ -436,7 +436,7 @@ if ( $edit_task ) {
 					<td>
 						<select id="priority" name="priority">
 							<?php foreach ( $allowed_priorities as $priority_item ) : ?>
-								<option value="<?php echo esc_attr( $priority_item ); ?>" <?php selected( $f->priority ?? 'normal', $priority_item ); ?>><?php echo esc_html( $priority_item ); ?></option>
+								<option value="<?php echo esc_attr( $priority_item ); ?>" <?php selected( $f->priority ?? 'normal', $priority_item ); ?>><?php echo esc_html( Toptour_Ref_Labels::priority_label( $priority_item ) ); ?></option>
 							<?php endforeach; ?>
 						</select>
 					</td>
@@ -478,9 +478,9 @@ if ( $edit_task ) {
 			<?php if ( $latest_run ) : ?>
 				<div style="background: #fff; border: 1px solid #dcdcde; padding: 12px; margin-bottom: 16px;">
 					<h3><?php esc_html_e( 'Vysledok analyzy', 'toptour-reference-finder' ); ?></h3>
-					<p><strong><?php esc_html_e( 'Run ID:', 'toptour-reference-finder' ); ?></strong> <?php echo esc_html( $latest_run->id ); ?> | <strong><?php esc_html_e( 'Stav:', 'toptour-reference-finder' ); ?></strong> <?php echo esc_html( $latest_run->run_status ); ?> | <strong><?php esc_html_e( 'Provider:', 'toptour-reference-finder' ); ?></strong> <?php echo esc_html( $latest_run->discovery_provider ); ?></p>
+					<p><strong><?php esc_html_e( 'Run ID:', 'toptour-reference-finder' ); ?></strong> <?php echo esc_html( $latest_run->id ); ?> | <strong><?php esc_html_e( 'Stav:', 'toptour-reference-finder' ); ?></strong> <?php echo esc_html( Toptour_Ref_Labels::discovery_run_status_label( $latest_run->run_status ) ); ?> | <strong><?php esc_html_e( 'Provider:', 'toptour-reference-finder' ); ?></strong> <?php echo esc_html( Toptour_Ref_Labels::discovery_provider_label( $latest_run->discovery_provider ) ); ?></p>
 					<ul style="list-style: disc; padding-left: 20px;">
-						<li><strong><?php esc_html_e( 'Navrhnuty target_type:', 'toptour-reference-finder' ); ?></strong> <?php echo esc_html( $latest_run->resolved_target_type ); ?></li>
+						<li><strong><?php esc_html_e( 'Navrhnuty target_type:', 'toptour-reference-finder' ); ?></strong> <?php echo esc_html( Toptour_Ref_Labels::target_type_label( $latest_run->resolved_target_type ) ); ?></li>
 						<li><strong><?php esc_html_e( 'Navrhnuty ciel:', 'toptour-reference-finder' ); ?></strong> <?php echo esc_html( $latest_run->resolved_target_label ? $latest_run->resolved_target_label : '—' ); ?></li>
 						<li><strong><?php esc_html_e( 'Existuje v DB:', 'toptour-reference-finder' ); ?></strong> <?php echo esc_html( (int) $latest_run->resolved_target_id > 0 ? 'ano' : 'nie' ); ?></li>
 						<li><strong><?php esc_html_e( 'Platformove hinty:', 'toptour-reference-finder' ); ?></strong> <?php echo esc_html( ! empty( $run_analysis['platform_hints'] ) && is_array( $run_analysis['platform_hints'] ) ? implode( ', ', $run_analysis['platform_hints'] ) : '—' ); ?></li>
@@ -554,7 +554,7 @@ if ( $edit_task ) {
 						<input type="hidden" name="discovery_run_id" value="<?php echo esc_attr( $latest_run->id ); ?>">
 						<select name="discovery_provider">
 							<?php foreach ( Toptour_Ref_Discovery_Runs::get_allowed_providers() as $provider_item ) : ?>
-								<option value="<?php echo esc_attr( $provider_item ); ?>" <?php selected( $latest_run->discovery_provider, $provider_item ); ?>><?php echo esc_html( $provider_item ); ?></option>
+								<option value="<?php echo esc_attr( $provider_item ); ?>" <?php selected( $latest_run->discovery_provider, $provider_item ); ?>><?php echo esc_html( Toptour_Ref_Labels::discovery_provider_label( $provider_item ) ); ?></option>
 							<?php endforeach; ?>
 						</select>
 						<?php submit_button( __( 'Spustit discovery', 'toptour-reference-finder' ), 'primary', '', false ); ?>
@@ -655,8 +655,8 @@ if ( $edit_task ) {
 											<?php endif; ?>
 										</td>
 										<td><?php echo esc_html( $candidate->candidate_platform ); ?></td>
-										<td><?php echo esc_html( $candidate->candidate_source_type ); ?></td>
-										<td><?php echo esc_html( $candidate->candidate_status ); ?></td>
+										<td><?php echo esc_html( Toptour_Ref_Labels::source_type_label( $candidate->candidate_source_type ) ); ?></td>
+										<td><?php echo esc_html( Toptour_Ref_Labels::discovery_candidate_status_label( $candidate->candidate_status ) ); ?></td>
 										<td>
 											<?php if ( in_array( $candidate->candidate_status, [ 'new', 'needs_review' ], true ) ) : ?>
 												<form method="post" action="<?php echo esc_url( $base_url ); ?>" style="display:inline-block; margin-right: 6px;">
@@ -713,19 +713,19 @@ if ( $edit_task ) {
 				<select name="filter_status">
 					<option value=""><?php esc_html_e( '- Stav -', 'toptour-reference-finder' ); ?></option>
 					<?php foreach ( $allowed_statuses as $status_item ) : ?>
-						<option value="<?php echo esc_attr( $status_item ); ?>" <?php selected( $filter_status, $status_item ); ?>><?php echo esc_html( $status_item ); ?></option>
+						<option value="<?php echo esc_attr( $status_item ); ?>" <?php selected( $filter_status, $status_item ); ?>><?php echo esc_html( Toptour_Ref_Labels::task_status_label( $status_item ) ); ?></option>
 					<?php endforeach; ?>
 				</select>
 				<select name="filter_priority">
 					<option value=""><?php esc_html_e( '- Priorita -', 'toptour-reference-finder' ); ?></option>
 					<?php foreach ( $allowed_priorities as $priority_item ) : ?>
-						<option value="<?php echo esc_attr( $priority_item ); ?>" <?php selected( $filter_priority, $priority_item ); ?>><?php echo esc_html( $priority_item ); ?></option>
+						<option value="<?php echo esc_attr( $priority_item ); ?>" <?php selected( $filter_priority, $priority_item ); ?>><?php echo esc_html( Toptour_Ref_Labels::priority_label( $priority_item ) ); ?></option>
 					<?php endforeach; ?>
 				</select>
 				<select name="filter_target_type">
 					<option value=""><?php esc_html_e( '- Typ ciela -', 'toptour-reference-finder' ); ?></option>
 					<?php foreach ( $allowed_target_types as $target_type_item ) : ?>
-						<option value="<?php echo esc_attr( $target_type_item ); ?>" <?php selected( $filter_target_type, $target_type_item ); ?>><?php echo esc_html( $target_type_item ); ?></option>
+						<option value="<?php echo esc_attr( $target_type_item ); ?>" <?php selected( $filter_target_type, $target_type_item ); ?>><?php echo esc_html( Toptour_Ref_Labels::target_type_label( $target_type_item ) ); ?></option>
 					<?php endforeach; ?>
 				</select>
 				<input type="search" name="s" value="<?php echo esc_attr( $search ); ?>" placeholder="<?php esc_attr_e( 'Hladat...', 'toptour-reference-finder' ); ?>">
@@ -757,7 +757,7 @@ if ( $edit_task ) {
 			<?php if ( $tasks ) : ?>
 				<?php foreach ( $tasks as $task ) : ?>
 					<?php
-					$target_col = $task->target_type;
+					$target_col = Toptour_Ref_Labels::target_type_label( $task->target_type );
 					if ( ! empty( $task->target_id ) && (int) $task->target_id > 0 ) {
 						$target_col .= ' #' . $task->target_id;
 					}
@@ -768,9 +768,9 @@ if ( $edit_task ) {
 						<td><?php echo esc_html( $task->id ); ?></td>
 						<td><?php echo esc_html( $task->task_title ); ?></td>
 						<td><?php echo esc_html( $target_col ); ?></td>
-						<td><?php echo esc_html( $task->expected_source_type ); ?></td>
-						<td><?php echo esc_html( $task->task_status ); ?></td>
-						<td><?php echo esc_html( $task->priority ); ?></td>
+						<td><?php echo esc_html( Toptour_Ref_Labels::expected_source_type_label( $task->expected_source_type ) ); ?></td>
+						<td><?php echo esc_html( Toptour_Ref_Labels::task_status_label( $task->task_status ) ); ?></td>
+						<td><?php echo esc_html( Toptour_Ref_Labels::priority_label( $task->priority ) ); ?></td>
 						<td><?php echo esc_html( $task->attempts ); ?></td>
 						<td><?php echo $task->last_run_at ? esc_html( $task->last_run_at ) : '—'; ?></td>
 						<td><?php echo esc_html( $task->created_at ); ?></td>
