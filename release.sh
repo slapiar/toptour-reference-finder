@@ -93,11 +93,11 @@ sed -i -E "s/^([[:space:]]*\*[[:space:]]+Version:[[:space:]]*).*/\1$NEW_VERSION/
 sed -i -E "s/^([[:space:]]*\*[[:space:]]+@version[[:space:]]+)[0-9]+\.[0-9]+\.[0-9]+/\1$NEW_VERSION/" "$PLUGIN_FILE" || true
 
 # Runtime plugin version constant.
-sed -i -E "s/(define\('TOPTOUR_REF_VERSION',[[:space:]]*')[0-9]+\.[0-9]+\.[0-9]+('.*)/\1$NEW_VERSION\2/" "$PLUGIN_FILE"
+sed -i -E "s/(TOPTOUR_REF_VERSION',[[:space:]]+')[0-9]+\.[0-9]+\.[0-9]+/\1$NEW_VERSION/" "$PLUGIN_FILE"
 
 # Optional DB version bump.
 if [[ "$BUMP_DB_VERSION" == "db" ]]; then
-  sed -i -E "s/(define\('TOPTOUR_REF_DB_VERSION',[[:space:]]*')[0-9]+\.[0-9]+\.[0-9]+('.*)/\1$NEW_VERSION\2/" "$PLUGIN_FILE"
+  sed -i -E "s/(TOPTOUR_REF_DB_VERSION',[[:space:]]+')[0-9]+\.[0-9]+\.[0-9]+/\1$NEW_VERSION/" "$PLUGIN_FILE"
 elif [[ "$BUMP_DB_VERSION" != "no" ]]; then
   echo "Chyba: druhý parameter môže byť iba 'db'."
   echo "Použitie: ./release.sh [patch|minor|major] [db]"
