@@ -432,7 +432,7 @@ class Toptour_Ref_Labels {
 				'reference_analysis_updated' => 'Analýza referencie upravená',
 				'offer_snapshot_created' => 'Snapshot ponuky vytvorený',
 				'offer_snapshot_updated' => 'Snapshot ponuky upravený',
-				'poi_candidate_suggested' => 'POI kandidát navrhnutý',
+				'poi_candidate_suggested' => 'Extrakcia POI pripravená',
 				'poi_candidate_accepted' => 'POI kandidát prijatý',
 				'poi_candidate_rejected' => 'POI kandidát odmietnutý',
 				'error' => 'Chyba',

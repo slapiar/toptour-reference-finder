@@ -1,6 +1,13 @@
 
 ## 0.2.5
 - Opravená frequency logika pre výpočet `next_run_at`: `twice_daily` = +12h, `three_times_daily` = +8h, `six_daily` = +4h.
+- Zjednodušený zoznam Findings na manažérske stĺpce a čitateľnejší hlavný stĺpec „Zistenie“ (názov, stručné zhrnutie, meta riadok).
+- Zjednodušená tabuľka nálezov v detaile Collection Task na kľúčové informácie + akcia „Upraviť“.
+- Spresnené stavové riadky v detaile úlohy: oddelený stav úlohy a stav posledného behu.
+- Doplnené jednotné formátovanie dátumov `Y-m-d H:i` v manažérskych tabuľkách a histórii.
+- Doplnené manažérske preklady interných poznámok v histórii eventov (bez zmeny uložených dát).
+- Nahradené interné placeholder texty slovenským znením pri nových záznamoch a pridané zobrazovacie mapovanie pre historické anglické placeholdery.
+- Upravený text prázdneho stavu pre Source Offer Snapshot sekciu.
 - Pridané analytické metadáta referencií vo Findings: časové údaje, language/type, analysis summary/status, confidence a mapovacie poznámky.
 - Pridaná vrstva Source Offer Snapshot cez tabuľku `toptour_ref_offer_snapshots`.
 - Doplnené časové údaje referencie a analýzy pre lifecycle run.

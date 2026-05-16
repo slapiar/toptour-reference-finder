@@ -49,8 +49,8 @@ if ( $_SERVER['REQUEST_METHOD'] === 'POST' && isset( $_POST['toptour_ref_mode_su
 	$requested_mode = sanitize_text_field( wp_unslash( $_POST['toptour_ref_finder_mode'] ?? 'manual' ) );
 	$saved_mode = Toptour_Ref_Task_Processor::set_mode( $requested_mode );
 	$mode_notice = 'automatic' === $saved_mode
-		? __( 'Automaticky rezim bol zapnuty.', 'toptour-reference-finder' )
-		: __( 'Manualny rezim bol zapnuty.', 'toptour-reference-finder' );
+		? __( 'Automatický režim bol zapnutý.', 'toptour-reference-finder' )
+		: __( 'Manuálny režim bol zapnutý.', 'toptour-reference-finder' );
 }
 
 $finder_mode = Toptour_Ref_Task_Processor::get_mode();
@@ -109,7 +109,7 @@ if ( $wpdb->get_var( $wpdb->prepare( "SHOW TABLES LIKE %s", $signal_table ) ) ) 
 			<option value="manual" <?php selected( $finder_mode, 'manual' ); ?>><?php esc_html_e( 'Manual', 'toptour-reference-finder' ); ?></option>
 			<option value="automatic" <?php selected( $finder_mode, 'automatic' ); ?>><?php esc_html_e( 'Automatic', 'toptour-reference-finder' ); ?></option>
 		</select>
-		<?php submit_button( __( 'Ulozit rezim', 'toptour-reference-finder' ), 'secondary', '', false ); ?>
+		<?php submit_button( __( 'Uložiť režim', 'toptour-reference-finder' ), 'secondary', '', false ); ?>
 	</form>
 	<p>
 		<?php if ( 'manual' === $finder_mode ) : ?>

@@ -95,7 +95,7 @@ class Toptour_Ref_Task_Processor {
 
 		$finding_id = Toptour_Ref_Findings::create_finding(
 			[
-				'finding_title' => 'Internal analysis placeholder for task #' . absint( $task->id ),
+				'finding_title' => 'Testovacie analytické zistenie pre úlohu #' . absint( $task->id ),
 				'task_id' => absint( $task->id ),
 				'run_id' => absint( $run_id ),
 				'source_url' => '',
@@ -109,11 +109,11 @@ class Toptour_Ref_Task_Processor {
 				'source_last_checked_at' => $now,
 				'reference_language' => 'unknown',
 				'reference_type' => 'other',
-				'analysis_summary' => 'Internal placeholder analysis only. No external scraping or citation storage.',
+				'analysis_summary' => 'Testovací analytický záznam. Externý zber ešte nie je zapnutý.',
 				'analysis_status' => 'analyzed',
 				'confidence_score' => 50,
 				'destination_mapping_note' => '',
-				'poi_extraction_note' => 'No automatic POI extraction in this phase.',
+				'poi_extraction_note' => 'Automatická extrakcia bodov záujmu zatiaľ nie je aktívna.',
 				'offer_relation_note' => '',
 				'poi_candidate_id' => 0,
 				'destination_id' => absint( $task->destination_id ?? 0 ),
@@ -134,14 +134,14 @@ class Toptour_Ref_Task_Processor {
 				'repetition_level' => 'single',
 				'verification_status' => 'new',
 				'evidence_type' => 'own_observation',
-				'evidence_excerpt' => 'Internal run placeholder created for lifecycle verification.',
+				'evidence_excerpt' => 'Testovací záznam vytvorený na overenie životného cyklu úlohy.',
 				'evidence_url' => '',
 				'observed_at' => $now,
 				'reviewer_name' => '',
 				'reviewer_origin' => 'internal',
 				'language' => 'unknown',
 				'related_collection_task_id' => absint( $task->id ),
-				'notes' => 'Task lifecycle internal test record.',
+				'notes' => 'Testovací interný záznam pre overenie životného cyklu úlohy.',
 			]
 		);
 
@@ -198,7 +198,7 @@ class Toptour_Ref_Task_Processor {
 			}
 		}
 
-		Toptour_Ref_Task_Events::log_event( $task->id, 'poi_candidate_suggested', null, [ 'finding_id' => (int) $finding_id ], 'POI candidate is only prepared as TODO in this phase.' );
+		Toptour_Ref_Task_Events::log_event( $task->id, 'poi_candidate_suggested', null, [ 'finding_id' => (int) $finding_id ], 'Extrakcia bodov záujmu je zatiaľ pripravená len ako ďalší krok.' );
 
 		Toptour_Ref_Task_Runs::update_run(
 			$run_id,
