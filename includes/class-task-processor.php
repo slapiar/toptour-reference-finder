@@ -13,6 +13,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 class Toptour_Ref_Task_Processor {
+	private const MAX_ATTEMPTS = 3;
 
 	public static function get_mode() {
 		$mode = sanitize_text_field( (string) get_option( 'toptour_ref_finder_mode', 'manual' ) );
@@ -74,17 +75,30 @@ class Toptour_Ref_Task_Processor {
 			return [ 'success' => false, 'message' => 'Skipped: unknown frequency.' ];
 		}
 
+		$attempt_number = min( self::MAX_ATTEMPTS, max( 1, absint( $task->attempts ) + 1 ) );
+		Toptour_Ref_Task_Events::log_event(
+			$task->id,
+			'run_attempt_started',
+			null,
+			[
+				'attempt' => $attempt_number,
+				'max_attempts' => self::MAX_ATTEMPTS,
+				'mode' => $mode,
+			],
+			'Pokus behu #' . $attempt_number . ' bol spustený.'
+		);
+
 		$run_id = Toptour_Ref_Task_Runs::create_run(
 			$task->id,
 			[
 				'status' => 'running',
 				'started_at' => current_time( 'mysql' ),
-				'summary' => 'Reference analysis run started (' . $mode . ').',
+				'summary' => 'Reference analysis run started (' . $mode . ') - attempt ' . $attempt_number . ' of ' . self::MAX_ATTEMPTS . '.',
 			]
 		);
 
 		if ( ! $run_id ) {
-			Toptour_Ref_Task_Events::log_event( $task->id, 'error', null, null, 'Task run creation failed.' );
+			self::handle_attempt_failure( $task, null, $attempt_number, 'Task run creation failed.', $mode );
 			return [ 'success' => false, 'message' => 'Run creation failed.' ];
 		}
 
@@ -147,6 +161,7 @@ class Toptour_Ref_Task_Processor {
 
 		if ( ! $finding_id ) {
 			self::finish_run_with_error( $task->id, $run_id, 'Finding creation failed.' );
+			self::handle_attempt_failure( $task, $run_id, $attempt_number, 'Finding creation failed.', $mode );
 			return [ 'success' => false, 'message' => 'Finding creation failed.' ];
 		}
 
@@ -226,17 +241,72 @@ class Toptour_Ref_Task_Processor {
 	}
 
 	private static function finish_run_with_error( $task_id, $run_id, $message ) {
-		Toptour_Ref_Task_Runs::update_run(
-			$run_id,
-			[
-				'status' => 'failed',
-				'finished_at' => current_time( 'mysql' ),
-				'error_count' => 1,
-				'summary' => sanitize_text_field( $message ),
-			]
-		);
+		if ( $run_id ) {
+			Toptour_Ref_Task_Runs::update_run(
+				$run_id,
+				[
+					'status' => 'failed',
+					'finished_at' => current_time( 'mysql' ),
+					'error_count' => 1,
+					'summary' => sanitize_text_field( $message ),
+				]
+			);
+		}
 		Toptour_Ref_Task_Events::log_event( $task_id, 'error', null, [ 'run_id' => (int) $run_id ], sanitize_text_field( $message ) );
-		self::update_task_schedule_after_run( Toptour_Ref_Collection_Tasks::get_task( $task_id ), false );
+	}
+
+	private static function handle_attempt_failure( $task, $run_id, $attempt_number, $message, $mode = 'manual' ) {
+		if ( ! $task ) {
+			return;
+		}
+
+		$attempt_number = max( 1, min( self::MAX_ATTEMPTS, absint( $attempt_number ) ) );
+		$task_id = absint( $task->id );
+		$now = current_time( 'mysql' );
+		$is_final_attempt = $attempt_number >= self::MAX_ATTEMPTS;
+
+		if ( ! $run_id ) {
+			Toptour_Ref_Task_Events::log_event( $task_id, 'error', null, [ 'attempt' => $attempt_number ], sanitize_text_field( $message ) );
+		}
+
+		Toptour_Ref_Task_Events::log_event(
+			$task_id,
+			'run_suspect',
+			[
+				'attempt' => $attempt_number,
+				'run_id' => (int) $run_id,
+			],
+			null,
+			'Beh úlohy sa javí ako podozrivý.'
+		);
+
+		global $wpdb;
+		$update = [
+			'attempts' => $attempt_number,
+			'last_run_at' => $now,
+			'updated_at' => $now,
+		];
+
+		$can_auto_retry = 'automatic' === $mode || 'active' === (string) ( $task->task_status ?? '' );
+
+		if ( $is_final_attempt ) {
+			$update['task_status'] = 'failed';
+			$update['next_run_at'] = null;
+			Toptour_Ref_Task_Events::log_event( $task_id, 'run_failed_max_attempts', null, [ 'attempt' => $attempt_number, 'run_id' => (int) $run_id ], 'Beh úlohy zlyhal po troch neúspešných pokusoch.' );
+		} elseif ( $can_auto_retry ) {
+			$update['task_status'] = 'active';
+			$update['next_run_at'] = $now;
+			Toptour_Ref_Task_Events::log_event( $task_id, 'run_reset_automatic', null, [ 'attempt' => $attempt_number, 'next_attempt' => $attempt_number + 1, 'run_id' => (int) $run_id ], 'Automatický reset pripravil ďalší pokus.' );
+			Toptour_Ref_Task_Events::log_event( $task_id, 'run_retry_scheduled', null, [ 'attempt' => $attempt_number + 1, 'run_id' => (int) $run_id ], 'Ďalší pokus bol naplánovaný.' );
+		} else {
+			$update['next_run_at'] = null;
+		}
+
+		$wpdb->update(
+			Toptour_Ref_Collection_Tasks::get_table_name(),
+			$update,
+			[ 'id' => $task_id ]
+		);
 	}
 
 	private static function update_task_schedule_after_run( $task, $successful ) {
@@ -251,6 +321,7 @@ class Toptour_Ref_Task_Processor {
 		$update = [
 			'last_run_at' => current_time( 'mysql' ),
 			'updated_at' => current_time( 'mysql' ),
+			'attempts' => 0,
 		];
 
 		if ( null === $next_run ) {
@@ -263,8 +334,8 @@ class Toptour_Ref_Task_Processor {
 			$update['next_run_at'] = $next_run;
 		}
 
-		if ( ! $successful ) {
-			$update['task_status'] = 'failed';
+		if ( $successful && 'failed' === (string) ( $task->task_status ?? '' ) ) {
+			$update['task_status'] = 'active';
 		}
 
 		$wpdb->update(

@@ -240,6 +240,11 @@ class Toptour_Ref_Collection_Tasks {
 	 */
 	public static function update_task( $id, $data ) {
 		global $wpdb;
+		$existing_task = self::get_task( $id );
+		$attempts = absint( $existing_task->attempts ?? 0 );
+		if ( $existing_task && 'failed' === (string) ( $existing_task->task_status ?? '' ) && 'failed' !== (string) ( $data['task_status'] ?? '' ) ) {
+			$attempts = 0;
+		}
 		$result = $wpdb->update(
 			self::get_table_name(),
 			[
@@ -258,6 +263,7 @@ class Toptour_Ref_Collection_Tasks {
 				'priority'             => $data['priority'],
 				'assigned_to'          => $data['assigned_to'],
 				'notes'                => $data['notes'],
+				'attempts'             => $attempts,
 				'updated_at'           => current_time( 'mysql' ),
 			],
 			[ 'id' => absint( $id ) ]
