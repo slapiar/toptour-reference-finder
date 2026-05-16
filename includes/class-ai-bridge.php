@@ -164,28 +164,67 @@ class Toptour_Ref_AI_Bridge {
 
 		$batch_id = 'task-' . $task_id . '-' . gmdate( 'YmdHis' );
 
-		$question = ! empty( $task->query_text )
+		$analysis = Toptour_Ref_Collection_Task_Resolver::analyze_task( $task );
+		$query_seeds = is_array( $analysis['search_queries'] ?? null ) ? array_values( array_filter( array_map( 'sanitize_text_field', (array) $analysis['search_queries'] ) ) ) : [];
+		if ( empty( $query_seeds ) ) {
+			$query_seeds = Toptour_Ref_Search_Provider::build_queries_from_task( $task, 5 );
+		}
+
+		$existing_candidates = Toptour_Ref_Search_Provider::get_existing_candidate_results( $task_id, 15 );
+		$platform_hints = is_array( $analysis['platform_hints'] ?? null ) ? array_values( array_filter( array_map( 'sanitize_text_field', (array) $analysis['platform_hints'] ) ) ) : [];
+		$finding_areas = is_array( $analysis['finding_area_candidates'] ?? null ) ? array_values( array_filter( array_map( 'sanitize_text_field', (array) $analysis['finding_area_candidates'] ) ) ) : [];
+
+		$base_question = ! empty( $task->query_text )
 			? sanitize_textarea_field( (string) $task->query_text )
 			: sanitize_text_field( (string) $task->task_title );
 
-		$context_parts = [];
-		if ( ! empty( $task->task_title ) ) {
-			$context_parts[] = 'Úloha: ' . sanitize_text_field( (string) $task->task_title );
+		$question_parts = [ $base_question ];
+		if ( ! empty( $query_seeds ) ) {
+			$question_parts[] = 'Použi aj tieto hľadané frázy: ' . implode( '; ', array_slice( $query_seeds, 0, 8 ) );
 		}
-		if ( ! empty( $task->target_type ) && 'general' !== $task->target_type ) {
-			$context_parts[] = 'Cieľ: ' . sanitize_text_field( (string) $task->target_type ) . ( ! empty( $task->target_id ) ? ' #' . absint( $task->target_id ) : '' );
+
+		$task_text = self::normalize_text_for_prompt( implode( ' ', [ (string) ( $task->task_title ?? '' ), (string) ( $task->query_text ?? '' ), (string) ( $task->source_hint ?? '' ) ] ) );
+		$photo_intent = ( false !== strpos( $task_text, 'fotk' ) || false !== strpos( $task_text, 'photo' ) || false !== strpos( $task_text, 'obraz' ) || false !== strpos( $task_text, 'tripadvisor' ) );
+		if ( $photo_intent ) {
+			$question_parts[] = 'Zameraj sa na kandidátov pre photo_evidence_candidates zo zdrojov typu TripAdvisor/Booking, kde je pravdepodobná galéria alebo foto sekcia.';
 		}
-		if ( ! empty( $task->source_hint ) ) {
-			$context_parts[] = 'Zdroje: ' . sanitize_textarea_field( (string) $task->source_hint );
+		$question = sanitize_textarea_field( implode( "\n", array_filter( $question_parts ) ) );
+
+		$constraints = [
+			'Pracuj iba s dodaným kontextom a candidate URL.',
+			'Ak pre modul nič nenájdeš, nechaj pole prázdne a dôvod uveď v import_notes.',
+			'Pre photos navrhuj iba source_url, ktoré sú URL stránky kandidátneho zdroja s potenciálom foto-galérie.',
+		];
+		if ( ! empty( $platform_hints ) ) {
+			$constraints[] = 'Preferuj platformy: ' . implode( ', ', $platform_hints ) . '.';
 		}
+
+		$context = [
+			'task' => [
+				'id' => $task_id,
+				'title' => sanitize_text_field( (string) ( $task->task_title ?? '' ) ),
+				'query_text' => sanitize_textarea_field( (string) ( $task->query_text ?? '' ) ),
+				'source_hint' => sanitize_textarea_field( (string) ( $task->source_hint ?? '' ) ),
+				'target_type' => sanitize_text_field( (string) ( $task->target_type ?? '' ) ),
+				'target_id' => absint( $task->target_id ?? 0 ),
+			],
+			'analysis' => [
+				'platform_hints' => $platform_hints,
+				'finding_area_candidates' => $finding_areas,
+				'expected_source_type' => sanitize_text_field( (string) ( $analysis['expected_source_type'] ?? '' ) ),
+			],
+			'query_seeds' => array_slice( $query_seeds, 0, 15 ),
+			'existing_candidates' => array_slice( (array) $existing_candidates, 0, 20 ),
+			'photo_intent' => $photo_intent ? 1 : 0,
+		];
 
 		$payload = [
 			'version'     => '1.0',
 			'batch_id'    => $batch_id,
 			'task_id'     => $task_id,
 			'question'    => $question,
-			'context'     => implode( "\n", $context_parts ),
-			'constraints' => '',
+			'context'     => $context,
+			'constraints' => implode( "\n", $constraints ),
 		];
 
 		$filename = $batch_id . '.json';
@@ -203,6 +242,17 @@ class Toptour_Ref_AI_Bridge {
 		}
 
 		return [ 'ok' => true, 'message' => 'Batch vygenerovaný.', 'filename' => $filename ];
+	}
+
+	private static function normalize_text_for_prompt( $text ) {
+		$text = remove_accents( wp_strip_all_tags( (string) $text ) );
+		$text = strtolower( $text );
+		$text = preg_replace( '/\s+/u', ' ', trim( $text ) );
+		if ( ! is_string( $text ) ) {
+			return '';
+		}
+
+		return sanitize_text_field( $text );
 	}
 
 	public static function process_pending_batches( $limit = null ) {
