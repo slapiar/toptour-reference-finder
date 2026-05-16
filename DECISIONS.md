@@ -1,5 +1,23 @@
 # DECISIONS: TOPTOUR Reference Finder
 
+## Decision: Search Intake automation pre Collection Task
+
+**Status:** Schvalene
+**Date:** 2026-05-16
+
+Collection Task detail obsahuje akciu `Vyhľadať a zapísať reálne dáta`, ktorá spúšťa real search-intake flow bez placeholder výstupov.
+
+Flow používa tieto pravidlá:
+
+- najprv sa použijú existujúci discovery kandidáti,
+- až potom sa použije konfigurovaný search provider (ak je povolený),
+- URL výsledky sa deduplikujú podľa normalizovaného URL a existujúcich source/finding väzieb,
+- každé URL sa odovzdá do Data Intake Router,
+- zlyhanie jedného URL nepreruší spracovanie ďalších,
+- audit sa zapisuje do search-intake eventov (`search_intake_started`, `search_result_found`, `source_ingested`, `search_intake_finished`, ...).
+
+Ak provider nie je dostupný a nie sú kandidáti, run sa ukončí bez fake findingov/snapshotov.
+
 ## Decision: Data Intake Router ako minimalny produkcny vstup
 
 **Status:** Schvalene

@@ -145,7 +145,7 @@ class Toptour_Ref_Task_Processor {
 			[
 				'status' => 'running',
 				'started_at' => current_time( 'mysql' ),
-				'summary' => 'Reference analysis run started (' . $mode . ') - attempt ' . $attempt_number . ' of ' . self::MAX_ATTEMPTS . '.',
+				'summary' => 'Search intake run started (' . $mode . ') - attempt ' . $attempt_number . ' of ' . self::MAX_ATTEMPTS . '.',
 			]
 		);
 
@@ -155,141 +155,272 @@ class Toptour_Ref_Task_Processor {
 		}
 
 		Toptour_Ref_Task_Events::log_event( $task->id, 'run_started', null, [ 'run_id' => $run_id, 'mode' => $mode ], 'Task run started.' );
+		Toptour_Ref_Task_Events::log_event( $task->id, 'search_intake_started', null, [ 'run_id' => $run_id, 'mode' => $mode ], 'Search intake bol spustený.' );
 
-		$now = current_time( 'mysql' );
-		$hash = md5( implode( '|', [ $task->id, $run_id, sanitize_text_field( $task->task_title ), sanitize_text_field( $task->query_text ) ] ) );
-
-		$finding_id = Toptour_Ref_Findings::create_finding(
-			[
-				'finding_title' => 'Testovacie analytické zistenie pre úlohu #' . absint( $task->id ),
-				'task_id' => absint( $task->id ),
-				'run_id' => absint( $run_id ),
-				'source_url' => '',
-				'source_title' => sanitize_text_field( $task->task_title ),
-				'source_type' => 'other',
-				'excerpt' => '',
-				'detected_sentiment' => 'neutral',
-				'review_published_at' => '',
-				'analysis_performed_at' => $now,
-				'source_detected_at' => $now,
-				'source_last_checked_at' => $now,
-				'reference_language' => 'unknown',
-				'reference_type' => 'other',
-				'analysis_summary' => 'Testovací analytický záznam. Externý zber ešte nie je zapnutý.',
-				'analysis_status' => 'analyzed',
-				'confidence_score' => 50,
-				'destination_mapping_note' => '',
-				'poi_extraction_note' => 'Automatická extrakcia bodov záujmu zatiaľ nie je aktívna.',
-				'offer_relation_note' => '',
-				'poi_candidate_id' => 0,
-				'destination_id' => absint( $task->destination_id ?? 0 ),
-				'supplier_id' => absint( $task->supplier_id ?? 0 ),
-				'offer_id' => absint( $task->offer_id ?? 0 ),
-				'hash' => $hash,
-				'status' => 'new',
-				'found_at' => $now,
-				'reviewed_by' => 0,
-				'reviewed_at' => '',
-				'source_id' => 0,
-				'signal_pattern_id' => 0,
-				'target_type' => 'collection_task',
-				'target_id' => absint( $task->id ),
-				'finding_type' => 'neutral',
-				'finding_area' => 'other',
-				'signal_strength' => 'weak',
-				'repetition_level' => 'single',
-				'verification_status' => 'new',
-				'evidence_type' => 'own_observation',
-				'evidence_excerpt' => 'Testovací záznam vytvorený na overenie životného cyklu úlohy.',
-				'evidence_url' => '',
-				'observed_at' => $now,
-				'reviewer_name' => '',
-				'reviewer_origin' => 'internal',
-				'language' => 'unknown',
-				'related_collection_task_id' => absint( $task->id ),
-				'notes' => 'Testovací interný záznam pre overenie životného cyklu úlohy.',
-			]
-		);
-
-		if ( ! $finding_id ) {
-			self::finish_run_with_error( $task->id, $run_id, 'Finding creation failed.' );
-			self::handle_attempt_failure( $task, $run_id, $attempt_number, 'Finding creation failed.', $mode );
-			return [ 'success' => false, 'message' => 'Finding creation failed.' ];
+		$settings = Toptour_Ref_Search_Provider::get_settings();
+		$max_results = max( 1, absint( $settings['max_search_results_per_task'] ?? 15 ) );
+		$queries = Toptour_Ref_Search_Provider::build_queries_from_task( $task, 5 );
+		foreach ( $queries as $query ) {
+			Toptour_Ref_Task_Events::log_event( $task->id, 'search_query_generated', null, [ 'run_id' => $run_id, 'query' => $query ], 'Vygenerovaný vyhľadávací dopyt.' );
 		}
 
-		Toptour_Ref_Task_Events::log_event( $task->id, 'finding_added', null, [ 'finding_id' => (int) $finding_id ], 'Lifecycle finding created.' );
-		Toptour_Ref_Task_Events::log_event( $task->id, 'reference_analysis_created', null, [ 'finding_id' => (int) $finding_id, 'run_id' => (int) $run_id ], 'Reference analysis metadata created.' );
+		$results = [];
+		$candidate_results = Toptour_Ref_Search_Provider::get_existing_candidate_results( $task->id, $max_results );
+		if ( ! empty( $candidate_results ) ) {
+			$results = array_merge( $results, $candidate_results );
+		}
 
-		$snapshot_id = false;
-		if ( absint( $task->offer_id ?? 0 ) > 0 || ! empty( $task->query_text ) ) {
-			$snapshot_hash = md5( implode( '|', [ $task->id, $task->offer_id, $task->query_text, gmdate( 'Y-m-d-H' ) ] ) );
-			$snapshot_id = Toptour_Ref_Offer_Snapshots::create_snapshot(
-				[
-					'finding_id' => (int) $finding_id,
-					'task_id' => (int) $task->id,
-					'run_id' => (int) $run_id,
-					'offer_id' => absint( $task->offer_id ?? 0 ),
-					'supplier_id' => absint( $task->supplier_id ?? 0 ),
-					'destination_id' => absint( $task->destination_id ?? 0 ),
-					'source_url' => '',
-					'source_title' => sanitize_text_field( $task->task_title ),
-					'offer_name' => sanitize_text_field( $task->task_title ),
-					'offer_description_summary' => 'Internal summary placeholder. No external citation copied.',
-					'price_value' => null,
-					'price_currency' => '',
-					'price_note' => 'Price unavailable in internal placeholder mode.',
-					'stay_duration' => '',
-					'persons_min' => 0,
-					'persons_max' => 0,
-					'season' => '',
-					'meal_plan' => '',
-					'transport_type' => '',
-					'accommodation_type' => '',
-					'facility_category' => '',
-					'included_services_summary' => '',
-					'excluded_services_summary' => '',
-					'availability_note' => '',
-					'booking_conditions_summary' => '',
-					'public_offer_published_at' => '',
-					'source_detected_at' => $now,
-					'source_last_checked_at' => $now,
-					'analysis_performed_at' => $now,
-					'snapshot_hash' => $snapshot_hash,
-					'status' => 'new',
-				]
-			);
+		$provider_reason = '';
+		if ( count( $results ) < $max_results ) {
+			$provider_type = sanitize_text_field( (string) ( $settings['search_provider_type'] ?? 'existing_candidates_only' ) );
+			$provider_enabled = ! empty( $settings['search_provider_enabled'] );
 
-			if ( $snapshot_id ) {
-				Toptour_Ref_Task_Events::log_event( $task->id, 'offer_snapshot_created', null, [ 'snapshot_id' => (int) $snapshot_id, 'finding_id' => (int) $finding_id ], 'Offer snapshot created.' );
-				Toptour_Ref_Offer_Snapshots::mark_previous_snapshots_superseded( (int) $task->id, absint( $task->offer_id ?? 0 ), (int) $snapshot_id );
+			if ( ! $provider_enabled || 'disabled' === $provider_type ) {
+				$provider_reason = 'provider_disabled';
+			} elseif ( 'configured_api' === $provider_type ) {
+				foreach ( $queries as $query ) {
+					$remaining = $max_results - count( $results );
+					if ( $remaining <= 0 ) {
+						break;
+					}
+
+					$api_response = Toptour_Ref_Search_Provider::search_configured_api( $query, $settings, min( 10, $remaining ) );
+					if ( empty( $api_response['success'] ) ) {
+						$provider_reason = sanitize_text_field( (string) ( $api_response['reason'] ?? 'api_failed' ) );
+						Toptour_Ref_Task_Events::log_event( $task->id, 'search_provider_error', null, [ 'run_id' => $run_id, 'query' => $query, 'reason' => $provider_reason ], 'Vyhľadávací provider zlyhal.' );
+						continue;
+					}
+
+					$results = array_merge( $results, (array) ( $api_response['results'] ?? [] ) );
+				}
 			}
 		}
 
-		Toptour_Ref_Task_Events::log_event( $task->id, 'poi_candidate_suggested', null, [ 'finding_id' => (int) $finding_id ], 'Extrakcia bodov záujmu je zatiaľ pripravená len ako ďalší krok.' );
+		if ( empty( $results ) ) {
+			if ( '' !== $provider_reason ) {
+				Toptour_Ref_Task_Events::log_event( $task->id, 'search_provider_missing', null, [ 'run_id' => $run_id, 'reason' => $provider_reason ], 'Provider nevrátil URL pre intake.' );
+			}
 
+			Toptour_Ref_Task_Runs::update_run(
+				$run_id,
+				[
+					'status' => 'finished',
+					'finished_at' => current_time( 'mysql' ),
+					'found_count' => 0,
+					'new_count' => 0,
+					'duplicate_count' => 0,
+					'error_count' => 0,
+					'summary' => 'Search intake finished: no URLs available.',
+				]
+			);
+
+			Toptour_Ref_Task_Events::log_event( $task->id, 'search_intake_finished', null, [ 'run_id' => $run_id, 'processed' => 0, 'duplicates' => 0, 'errors' => 0 ], 'Search intake bol ukončený bez výsledných URL.' );
+			Toptour_Ref_Task_Events::log_event( $task->id, 'run_finished', null, [ 'run_id' => (int) $run_id ], 'Task run finished.' );
+			self::update_task_schedule_after_run( $task, true );
+
+			return [
+				'success' => true,
+				'message' => 'Search intake finished: no URLs available.',
+				'run_id' => (int) $run_id,
+				'processed_count' => 0,
+				'duplicate_count' => 0,
+				'error_count' => 0,
+				'found_count' => 0,
+			];
+		}
+
+		$processed_count = 0;
+		$duplicate_count = 0;
+		$error_count = 0;
+		$checked_count = 0;
+		$seen_urls = [];
+
+		foreach ( $results as $result ) {
+			if ( $checked_count >= $max_results ) {
+				break;
+			}
+
+			$raw_url = esc_url_raw( (string) ( $result['result_url'] ?? '' ) );
+			if ( '' === $raw_url ) {
+				continue;
+			}
+
+			$normalized = self::normalize_url_for_search( $raw_url );
+			if ( '' === $normalized || isset( $seen_urls[ $normalized ] ) ) {
+				$duplicate_count++;
+				continue;
+			}
+
+			$seen_urls[ $normalized ] = true;
+			$checked_count++;
+
+			if ( self::is_duplicate_source_or_finding( $task->id, $normalized ) ) {
+				$duplicate_count++;
+				Toptour_Ref_Task_Events::log_event( $task->id, 'search_result_duplicate', null, [ 'run_id' => $run_id, 'url' => $normalized ], 'URL bola vyhodnotená ako duplikát.' );
+				continue;
+			}
+
+			Toptour_Ref_Task_Events::log_event( $task->id, 'search_result_found', null, [ 'run_id' => $run_id, 'url' => $normalized, 'query' => sanitize_text_field( (string) ( $result['query_used'] ?? '' ) ) ], 'Nájdený výsledok pre intake.' );
+			Toptour_Ref_Task_Events::log_event( $task->id, 'source_sent_to_intake', null, [ 'run_id' => $run_id, 'url' => $normalized ], 'Zdroj bol odoslaný do Data Intake Router.' );
+
+			$intake_input = [
+				'task_id' => absint( $task->id ),
+				'run_id' => absint( $run_id ),
+				'source_url' => $normalized,
+				'destination_id' => absint( $task->destination_id ?? 0 ),
+				'facility_id' => absint( $task->supplier_id ?? 0 ),
+				'offer_id' => absint( $task->offer_id ?? 0 ),
+				'input_type' => 'auto',
+				'manager_note' => sanitize_textarea_field( (string) ( $result['result_snippet'] ?? '' ) ),
+			];
+
+			$intake_result = Toptour_Ref_Data_Intake_Router::process_manual_intake( $intake_input );
+			if ( empty( $intake_result['success'] ) ) {
+				$error_count++;
+				$error_message = sanitize_text_field( (string) ( $intake_result['message'] ?? 'Intake failed.' ) );
+				Toptour_Ref_Task_Events::log_event( $task->id, 'intake_failed', null, [ 'run_id' => $run_id, 'url' => $normalized ], $error_message );
+				if ( false !== stripos( $error_message, 'http' ) || false !== stripos( $error_message, 'fetch' ) ) {
+					Toptour_Ref_Task_Events::log_event( $task->id, 'source_fetch_failed', null, [ 'run_id' => $run_id, 'url' => $normalized ], $error_message );
+				}
+				continue;
+			}
+
+			$processed_count++;
+			$details = (array) ( $intake_result['details'] ?? [] );
+			Toptour_Ref_Task_Events::log_event( $task->id, 'source_ingested', null, [ 'run_id' => $run_id, 'url' => $normalized, 'source_id' => absint( $details['source_id'] ?? 0 ) ], 'Zdroj bol úspešne ingestovaný.' );
+
+			if ( ! empty( $details['finding_created'] ) ) {
+				Toptour_Ref_Task_Events::log_event( $task->id, 'finding_created', null, [ 'run_id' => $run_id, 'finding_id' => absint( $details['finding_id'] ?? 0 ) ], 'Vytvorený finding zo search intake.' );
+			}
+			if ( ! empty( $details['offer_created'] ) ) {
+				Toptour_Ref_Task_Events::log_event( $task->id, 'offer_created', null, [ 'run_id' => $run_id, 'offer_id' => absint( $details['offer_id'] ?? 0 ) ], 'Vytvorená ponuka zo search intake.' );
+			}
+			if ( ! empty( $details['offer_updated'] ) ) {
+				Toptour_Ref_Task_Events::log_event( $task->id, 'offer_updated', null, [ 'run_id' => $run_id, 'offer_id' => absint( $details['offer_id'] ?? 0 ) ], 'Aktualizovaná ponuka zo search intake.' );
+			}
+		}
+
+		$run_status = $processed_count > 0 || 0 === $error_count ? 'finished' : 'failed';
 		Toptour_Ref_Task_Runs::update_run(
 			$run_id,
 			[
-				'status' => 'finished',
+				'status' => $run_status,
 				'finished_at' => current_time( 'mysql' ),
-				'found_count' => 1,
-				'new_count' => 1,
-				'duplicate_count' => 0,
-				'error_count' => 0,
-				'summary' => 'Internal lifecycle run completed.',
+				'found_count' => $checked_count,
+				'new_count' => $processed_count,
+				'duplicate_count' => $duplicate_count,
+				'error_count' => $error_count,
+				'summary' => sprintf( 'Search intake done. processed=%d duplicates=%d errors=%d', $processed_count, $duplicate_count, $error_count ),
 			]
 		);
 
+		Toptour_Ref_Task_Events::log_event( $task->id, 'search_intake_finished', null, [ 'run_id' => $run_id, 'processed' => $processed_count, 'duplicates' => $duplicate_count, 'errors' => $error_count ], 'Search intake bol ukončený.' );
 		Toptour_Ref_Task_Events::log_event( $task->id, 'run_finished', null, [ 'run_id' => (int) $run_id ], 'Task run finished.' );
+
+		if ( 'failed' === $run_status ) {
+			self::handle_attempt_failure( $task, $run_id, $attempt_number, 'Search intake failed for all URLs.', $mode );
+			return [
+				'success' => false,
+				'message' => 'Search intake failed for all URLs.',
+				'run_id' => (int) $run_id,
+				'processed_count' => $processed_count,
+				'duplicate_count' => $duplicate_count,
+				'error_count' => $error_count,
+				'found_count' => $checked_count,
+			];
+		}
+
 		self::update_task_schedule_after_run( $task, true );
 
 		return [
 			'success' => true,
-			'message' => 'Task lifecycle run completed.',
+			'message' => 'Search intake completed.',
 			'run_id' => (int) $run_id,
-			'finding_id' => (int) $finding_id,
-			'snapshot_id' => $snapshot_id ? (int) $snapshot_id : 0,
+			'processed_count' => $processed_count,
+			'duplicate_count' => $duplicate_count,
+			'error_count' => $error_count,
+			'found_count' => $checked_count,
 		];
+	}
+
+	private static function normalize_url_for_search( $url ) {
+		$parts = wp_parse_url( trim( (string) $url ) );
+		if ( ! is_array( $parts ) || empty( $parts['host'] ) ) {
+			return '';
+		}
+
+		$scheme = isset( $parts['scheme'] ) ? strtolower( (string) $parts['scheme'] ) : 'https';
+		$host = strtolower( (string) $parts['host'] );
+		$path = isset( $parts['path'] ) ? rtrim( (string) $parts['path'], '/' ) : '';
+		if ( '' === $path ) {
+			$path = '/';
+		}
+
+		$query = '';
+		if ( ! empty( $parts['query'] ) ) {
+			parse_str( (string) $parts['query'], $query_args );
+			if ( is_array( $query_args ) ) {
+				foreach ( array_keys( $query_args ) as $key ) {
+					if ( 0 === strpos( (string) $key, 'utm_' ) ) {
+						unset( $query_args[ $key ] );
+					}
+				}
+				ksort( $query_args );
+				$query = http_build_query( $query_args );
+			}
+		}
+
+		return $scheme . '://' . $host . $path . ( '' !== $query ? '?' . $query : '' );
+	}
+
+	private static function is_duplicate_source_or_finding( $task_id, $normalized_url ) {
+		global $wpdb;
+		$task_id = absint( $task_id );
+		$normalized_url = trim( (string) $normalized_url );
+		if ( '' === $normalized_url ) {
+			return true;
+		}
+
+		$source_table = Toptour_Ref_Reference_Sources::get_table_name();
+		$finding_table = Toptour_Ref_Findings::get_table_name();
+		$host = wp_parse_url( $normalized_url, PHP_URL_HOST );
+
+		if ( $host ) {
+			$source_rows = $wpdb->get_results(
+				$wpdb->prepare(
+					"SELECT source_url FROM $source_table WHERE source_url LIKE %s ORDER BY id DESC LIMIT 300",
+					'%' . $wpdb->esc_like( (string) $host ) . '%'
+				)
+			);
+			foreach ( (array) $source_rows as $row ) {
+				if ( self::normalize_url_for_search( (string) $row->source_url ) === $normalized_url ) {
+					return true;
+				}
+			}
+		}
+
+		$finding_exists = (int) $wpdb->get_var(
+			$wpdb->prepare(
+				"SELECT COUNT(1) FROM $finding_table WHERE related_collection_task_id = %d AND source_url <> ''",
+				$task_id
+			)
+		);
+		if ( $finding_exists > 0 && $host ) {
+			$finding_rows = $wpdb->get_results(
+				$wpdb->prepare(
+					"SELECT source_url FROM $finding_table WHERE related_collection_task_id = %d AND source_url LIKE %s ORDER BY id DESC LIMIT 300",
+					$task_id,
+					'%' . $wpdb->esc_like( (string) $host ) . '%'
+				)
+			);
+			foreach ( (array) $finding_rows as $row ) {
+				if ( self::normalize_url_for_search( (string) $row->source_url ) === $normalized_url ) {
+					return true;
+				}
+			}
+		}
+
+		return false;
 	}
 
 	private static function finish_run_with_error( $task_id, $run_id, $message ) {

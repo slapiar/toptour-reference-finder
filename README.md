@@ -2,7 +2,7 @@
 
 Interny WordPress plugin pre TOPTOUR, ktory sluzi ako funkcne pracovne prostredie pre manazera cestovneho ruchu.
 
-**Version:** 0.2.8
+**Version:** 0.2.9
 **Status:** Aktivne interne pouzivanie (prevadzkovy rezim)
 **Text Domain:** toptour-reference-finder
 **Prefix:** Toptour_Ref_

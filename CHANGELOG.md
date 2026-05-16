@@ -1,4 +1,14 @@
 
+## 0.2.9
+- Pridaná automatizácia search-intake pre Collection Task cez akciu „Vyhľadať a zapísať reálne dáta“.
+- `Task Processor` už negeneruje placeholder findings/snapshots pre realný intake flow.
+- Pridaná vrstva `Search Provider` s režimami `existing_candidates_only` (default), `configured_api`, `disabled`.
+- Search-intake používa kandidátov ako prvý zdroj, potom voliteľný API provider.
+- Doplnená deduplikácia URL podľa normalizácie a existujúcich source/finding väzieb.
+- Doplnené task eventy pre search-intake lifecycle (`search_query_generated`, `search_result_found`, `source_sent_to_intake`, `source_ingested`, `search_intake_finished`, ...).
+- Doplnená sekcia „Vyhľadávací zdroj" v Settings (`search_provider_enabled`, `search_provider_type`, `search_provider_endpoint`, `search_provider_api_key`, `max_search_results_per_task`).
+- Opravený zápis offer snapshotu v Data Intake Router na existujúci Offer Snapshots modul.
+
 ## 0.2.8
 - Stabilizačný release po merge vetvy `release/0.2.2` do `main`.
 - Zjednotená release história a tagy na hlavnej vetve.

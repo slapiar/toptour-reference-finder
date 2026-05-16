@@ -2,7 +2,7 @@
 
 **Plugin Name:** TOPTOUR Reference Finder
 **Slug:** toptour-reference-finder
-**Version:** 0.2.8
+**Version:** 0.2.9
 **Status:** Aktivny interny manazersky system
 **Author:** TOPTOUR
 

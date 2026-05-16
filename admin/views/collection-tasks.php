@@ -142,6 +142,7 @@ $edit_id     = isset( $_GET['task_id'] ) ? absint( $_GET['task_id'] ) : 0;
 $notice      = '';
 $notice_type = 'success';
 $intake_result = null;
+$search_intake_result = null;
 $finder_mode = Toptour_Ref_Task_Processor::get_mode();
 
 if ( $action === 'archive' && $edit_id ) {
@@ -433,10 +434,10 @@ if ( $_SERVER['REQUEST_METHOD'] === 'POST' && isset( $_POST['toptour_ct_finder_s
 		}
 	}
 
-	if ( 'run_test' === $finder_action && $task_id > 0 ) {
-		$result = Toptour_Ref_Task_Processor::process_task( $task_id, 'manual' );
-		$notice = sanitize_text_field( $result['message'] ?? __( 'Testovaci beh bol vykonany.', 'toptour-reference-finder' ) );
-		$notice_type = ! empty( $result['success'] ) ? 'success' : 'error';
+	if ( ( 'search_intake' === $finder_action || 'run_test' === $finder_action ) && $task_id > 0 ) {
+		$search_intake_result = Toptour_Ref_Task_Processor::process_task( $task_id, 'manual' );
+		$notice = sanitize_text_field( $search_intake_result['message'] ?? __( 'Search intake bol vykonaný.', 'toptour-reference-finder' ) );
+		$notice_type = ! empty( $search_intake_result['success'] ) ? 'success' : 'error';
 	}
 
 	if ( 'create_candidate' === $finder_action && $run_id > 0 && $task_id > 0 ) {
@@ -730,9 +731,9 @@ if ( $edit_task ) {
 			<form method="post" action="<?php echo esc_url( $base_url ); ?>" style="margin-bottom: 12px;">
 				<?php wp_nonce_field( 'toptour_collection_discovery_action' ); ?>
 				<input type="hidden" name="toptour_ct_finder_submit" value="1">
-				<input type="hidden" name="finder_action" value="run_test">
+				<input type="hidden" name="finder_action" value="search_intake">
 				<input type="hidden" name="task_id" value="<?php echo esc_attr( $form_id ); ?>">
-				<?php submit_button( __( 'Spustiť testovací beh', 'toptour-reference-finder' ), 'primary', '', false ); ?>
+				<?php submit_button( __( 'Vyhľadať a zapísať reálne dáta', 'toptour-reference-finder' ), 'primary', '', false ); ?>
 			</form>
 
 			<div style="background: #fff; border: 1px solid #dcdcde; padding: 12px; margin-bottom: 16px;">
@@ -796,6 +797,18 @@ if ( $edit_task ) {
 							<tr><th><?php esc_html_e( 'Facility kandidát vytvorený', 'toptour-reference-finder' ); ?></th><td><?php echo ! empty( $d['facility_candidate_created'] ) ? 'YES' : 'NO'; ?></td></tr>
 							<tr><th><?php esc_html_e( 'Destination kandidát vytvorený', 'toptour-reference-finder' ); ?></th><td><?php echo ! empty( $d['destination_candidate_created'] ) ? 'YES' : 'NO'; ?></td></tr>
 							<tr><th><?php esc_html_e( 'Photo evidence vytvorený', 'toptour-reference-finder' ); ?></th><td><?php echo ! empty( $d['photo_evidence_created'] ) ? 'YES' : 'NO'; ?></td></tr>
+						</tbody>
+					</table>
+				<?php endif; ?>
+
+				<?php if ( is_array( $search_intake_result ) ) : ?>
+					<table class="widefat striped" style="margin-top: 10px;">
+						<tbody>
+							<tr><th><?php esc_html_e( 'Search intake run ID', 'toptour-reference-finder' ); ?></th><td><?php echo esc_html( (string) ( $search_intake_result['run_id'] ?? '0' ) ); ?></td></tr>
+							<tr><th><?php esc_html_e( 'Nájdené URL', 'toptour-reference-finder' ); ?></th><td><?php echo esc_html( (string) ( $search_intake_result['found_count'] ?? '0' ) ); ?></td></tr>
+							<tr><th><?php esc_html_e( 'Spracované URL', 'toptour-reference-finder' ); ?></th><td><?php echo esc_html( (string) ( $search_intake_result['processed_count'] ?? '0' ) ); ?></td></tr>
+							<tr><th><?php esc_html_e( 'Duplikáty', 'toptour-reference-finder' ); ?></th><td><?php echo esc_html( (string) ( $search_intake_result['duplicate_count'] ?? '0' ) ); ?></td></tr>
+							<tr><th><?php esc_html_e( 'Chyby', 'toptour-reference-finder' ); ?></th><td><?php echo esc_html( (string) ( $search_intake_result['error_count'] ?? '0' ) ); ?></td></tr>
 						</tbody>
 					</table>
 				<?php endif; ?>

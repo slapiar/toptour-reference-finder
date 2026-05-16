@@ -42,6 +42,7 @@ class Toptour_Ref_Loader {
 		require_once TOPTOUR_REF_PLUGIN_DIR . 'includes/class-task-runs.php';
 		require_once TOPTOUR_REF_PLUGIN_DIR . 'includes/class-task-events.php';
 		require_once TOPTOUR_REF_PLUGIN_DIR . 'includes/class-offer-snapshots.php';
+		require_once TOPTOUR_REF_PLUGIN_DIR . 'includes/class-search-provider.php';
 		require_once TOPTOUR_REF_PLUGIN_DIR . 'includes/class-task-processor.php';
 		require_once TOPTOUR_REF_PLUGIN_DIR . 'includes/class-data-intake-router.php';
 		require_once TOPTOUR_REF_PLUGIN_DIR . 'includes/class-facilities.php';

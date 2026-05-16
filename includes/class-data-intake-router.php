@@ -546,23 +546,48 @@ class Toptour_Ref_Data_Intake_Router {
 	}
 
 	private static function create_offer_snapshot( $offer_id, $source_id, $signals, $http_status ) {
-		global $wpdb;
-		$table = $wpdb->prefix . 'toptour_ref_offer_snapshots';
-		$wpdb->insert(
-			$table,
+		$status = ( $http_status >= 200 && $http_status < 400 ) ? 'new' : 'error';
+		$snapshot_id = Toptour_Ref_Offer_Snapshots::create_snapshot(
 			[
+				'finding_id' => 0,
+				'task_id' => 0,
+				'run_id' => 0,
 				'offer_id' => absint( $offer_id ),
-				'reference_source_id' => absint( $source_id ),
-				'snapshot_label' => 'Manual intake snapshot',
-				'offer_title' => sanitize_text_field( $signals['title'] ?? '' ),
-				'offer_summary' => sanitize_textarea_field( $signals['meta_description'] ?? '' ),
-				'offer_url' => esc_url_raw( $signals['canonical_url'] ?? '' ),
+				'supplier_id' => 0,
+				'destination_id' => 0,
+				'source_url' => esc_url_raw( $signals['canonical_url'] ?? '' ),
+				'source_title' => sanitize_text_field( $signals['title'] ?? '' ),
+				'offer_name' => sanitize_text_field( $signals['title'] ?? '' ),
+				'offer_description_summary' => sanitize_textarea_field( $signals['meta_description'] ?? '' ),
+				'price_value' => null,
+				'price_currency' => '',
 				'price_note' => sanitize_text_field( $signals['price_hint'] ?? '' ),
-				'availability_status' => $http_status >= 200 && $http_status < 400 ? 'available' : 'unknown',
-				'captured_at' => current_time( 'mysql' ),
-				'created_by' => get_current_user_id(),
+				'stay_duration' => '',
+				'persons_min' => 0,
+				'persons_max' => 0,
+				'valid_from' => '',
+				'valid_to' => '',
+				'season' => '',
+				'meal_plan' => '',
+				'transport_type' => '',
+				'accommodation_type' => '',
+				'facility_category' => '',
+				'included_services_summary' => '',
+				'excluded_services_summary' => '',
+				'availability_note' => absint( $source_id ) > 0 ? 'source_id=' . absint( $source_id ) : '',
+				'booking_conditions_summary' => '',
+				'public_offer_published_at' => '',
+				'source_detected_at' => current_time( 'mysql' ),
+				'source_last_checked_at' => current_time( 'mysql' ),
+				'analysis_performed_at' => current_time( 'mysql' ),
+				'snapshot_hash' => md5( absint( $offer_id ) . '|' . sanitize_text_field( $signals['title'] ?? '' ) . '|' . gmdate( 'YmdHi' ) ),
+				'status' => $status,
 			]
 		);
+
+		if ( $snapshot_id ) {
+			Toptour_Ref_Offer_Snapshots::mark_previous_snapshots_superseded( 0, absint( $offer_id ), (int) $snapshot_id );
+		}
 	}
 
 	private static function mark_run_failed( $run_id, $message ) {
