@@ -16,8 +16,9 @@ if ! git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
 fi
 
 CURRENT_BRANCH="$(git branch --show-current)"
-if [[ "$CURRENT_BRANCH" == "main" ]]; then
-  echo "Chyba: release nerob priamo na main."
+
+if [[ -z "$CURRENT_BRANCH" ]]; then
+  echo "Chyba: nepodarilo sa zistiť aktuálnu vetvu."
   exit 1
 fi
 
