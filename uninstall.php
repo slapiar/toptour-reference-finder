@@ -5,7 +5,7 @@
  * Executed when the plugin is uninstalled via WordPress plugin management.
  *
  * @package Toptour_Ref
- * @version 0.1.0
+ * @version 0.2.14
  */
 
 // Exit if uninstall.php is not called by WordPress.

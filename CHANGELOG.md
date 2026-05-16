@@ -1,4 +1,9 @@
 
+## 0.2.14
+- Zjednotené verzie naprieč release metadátami po AI hardening zmenách.
+- Synchronizované `@version` v AI moduloch na aktuálnu verziu pluginu `0.2.14`.
+- Potvrdená DB schema verzia `0.2.4` ako konzistentná s tabuľkou `toptour_ref_ai_batch_registry`.
+
 ## 0.2.13
 - Pridané file-claim spracovanie pre AI inbox/outbox (`.processing`) na zamedzenie súbežného spracovania rovnakého súboru.
 - Pridaný bezpečný rollback claimu pre inbox pri zlyhaní zápisu outbox súboru.

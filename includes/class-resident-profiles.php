@@ -5,7 +5,7 @@
  * Internal resident profile layer for contacts.
  *
  * @package Toptour_Ref
- * @version 0.1.8
+ * @version 0.2.14
  */
 
 // Exit if accessed directly.

@@ -5,7 +5,7 @@
  * Stores internal time-based snapshots of publicly presented offer metadata.
  *
  * @package Toptour_Ref
- * @version 0.2.5
+ * @version 0.2.14
  */
 
 if ( ! defined( 'ABSPATH' ) ) {

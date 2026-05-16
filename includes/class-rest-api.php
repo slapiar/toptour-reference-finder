@@ -6,7 +6,7 @@
  * Current implementation is skeleton-only. All endpoints are reserved for future development.
  *
  * @package Toptour_Ref
- * @version 0.1.0
+ * @version 0.2.14
  *
  * REST Namespace: toptour-ref/v1
  *

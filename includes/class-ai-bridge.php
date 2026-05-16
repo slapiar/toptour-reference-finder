@@ -5,7 +5,7 @@
  * File-based OpenAI bridge for inbox/outbox JSON processing.
  *
  * @package Toptour_Ref
- * @version 0.2.11
+ * @version 0.2.14
  */
 
 if ( ! defined( 'ABSPATH' ) ) {

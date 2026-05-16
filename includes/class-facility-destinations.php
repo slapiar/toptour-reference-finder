@@ -5,7 +5,7 @@
  * Manages many-to-many relations between facilities and destinations.
  *
  * @package Toptour_Ref
- * @version 0.1.5
+ * @version 0.2.14
  */
 
 // Exit if accessed directly.

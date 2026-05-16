@@ -5,7 +5,7 @@
  * Manual URL intake for Collection Tasks.
  *
  * @package Toptour_Ref
- * @version 0.2.8
+ * @version 0.2.14
  */
 
 if ( ! defined( 'ABSPATH' ) ) {

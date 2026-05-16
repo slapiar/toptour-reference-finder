@@ -5,7 +5,7 @@
  * Maps AI bridge outbox JSON payloads into internal plugin modules.
  *
  * @package Toptour_Ref
- * @version 0.2.13
+ * @version 0.2.14
  */
 
 if ( ! defined( 'ABSPATH' ) ) {

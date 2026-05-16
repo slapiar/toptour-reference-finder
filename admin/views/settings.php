@@ -5,7 +5,7 @@
  * Settings and diagnostics page.
  *
  * @package Toptour_Ref
- * @version 0.1.2
+ * @version 0.2.14
  */
 
 // Exit if accessed directly.

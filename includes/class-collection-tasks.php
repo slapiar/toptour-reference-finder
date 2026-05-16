@@ -6,7 +6,7 @@
  * No scraping, no automation, no external requests.
  *
  * @package Toptour_Ref
- * @version 0.1.3
+ * @version 0.2.14
  */
 
 // Exit if accessed directly.

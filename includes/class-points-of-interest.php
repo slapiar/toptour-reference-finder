@@ -6,7 +6,7 @@
  * No public map, no scoring, no geocoding, no automation.
  *
  * @package Toptour_Ref
- * @version 0.1.12
+ * @version 0.2.14
  */
 
 // Exit if accessed directly.
