@@ -196,6 +196,32 @@ if ( $action === 'archive' && $edit_id ) {
 	$edit_id = 0;
 }
 
+if ( $action === 'send_to_ai' && $edit_id ) {
+	if ( ! isset( $_GET['_wpnonce'] ) || ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_GET['_wpnonce'] ) ), 'toptour_send_to_ai_' . $edit_id ) ) {
+		wp_die( esc_html__( 'Security check failed.', 'toptour-reference-finder' ) );
+	}
+
+	$ai_result = Toptour_Ref_AI_Bridge::generate_inbox_batch( $edit_id );
+	if ( ! empty( $ai_result['ok'] ) ) {
+		$notice      = sprintf(
+			/* translators: %s: filename */
+			__( 'Batch odoslaný do AI inbox: %s', 'toptour-reference-finder' ),
+			esc_html( (string) ( $ai_result['filename'] ?? '' ) )
+		);
+		$notice_type = 'success';
+	} else {
+		$notice      = sprintf(
+			/* translators: %s: error message */
+			__( 'Odoslanie do AI zlyhalo: %s', 'toptour-reference-finder' ),
+			esc_html( (string) ( $ai_result['message'] ?? '' ) )
+		);
+		$notice_type = 'error';
+	}
+
+	$action = '';
+	$edit_id = 0;
+}
+
 if ( $_SERVER['REQUEST_METHOD'] === 'POST' && isset( $_POST['toptour_ct_submit'] ) ) {
 	if ( ! isset( $_POST['_wpnonce'] ) || ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['_wpnonce'] ) ), 'toptour_save_collection_task' ) ) {
 		wp_die( esc_html__( 'Security check failed.', 'toptour-reference-finder' ) );
@@ -984,31 +1010,6 @@ if ( $is_task_detail ) {
 	<?php if ( 'add' === $action || 'edit' === $action ) : ?>
 		<?php
 		$f = $edit_task;
-		if ( $action === 'send_to_ai' && $edit_id ) {
-			if ( ! isset( $_GET['_wpnonce'] ) || ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_GET['_wpnonce'] ) ), 'toptour_send_to_ai_' . $edit_id ) ) {
-				wp_die( esc_html__( 'Security check failed.', 'toptour-reference-finder' ) );
-			}
-
-			$ai_result = Toptour_Ref_AI_Bridge::generate_inbox_batch( $edit_id );
-			if ( $ai_result['ok'] ) {
-				$notice      = sprintf(
-					/* translators: %s: filename */
-					__( 'Batch odoslaný do AI inbox: %s', 'toptour-reference-finder' ),
-					esc_html( $ai_result['filename'] ?? '' )
-				);
-				$notice_type = 'success';
-			} else {
-				$notice      = sprintf(
-					/* translators: %s: error message */
-					__( 'Odoslanie do AI zlyhalo: %s', 'toptour-reference-finder' ),
-					esc_html( $ai_result['message'] ?? '' )
-				);
-				$notice_type = 'error';
-			}
-			$action  = '';
-			$edit_id = 0;
-		}
-
 		if ( $_SERVER['REQUEST_METHOD'] === 'POST' && isset( $_POST['toptour_ct_submit'] ) ) {
 			$f = (object) Toptour_Ref_Collection_Tasks::sanitize_task_data( wp_unslash( $_POST ) );
 		}
