@@ -1,5 +1,10 @@
 
 ## 0.2.10
+- Zobrazené ID collection task v zozname úloh aj v detaile/editácii.
+- Doplnený discovery režim pre facility tasky bez target ID, ak zadanie poskytuje kontext destinácie alebo signálu.
+- Pridaná generácia query seeds pre testovaciu úlohu Negatíva zo Sardínie.
+- Pripravené pending candidate záznamy pre referenčné zdroje, zariadenia, zistenia a fotodôkazy naviazané na task.
+- Fotodôkazy a findings ostávajú striktne pending_review / needs_verification, bez predstierania vizuálneho overenia.
 - Pridaná procesná mapa workflow krokov na stránku Zber referencií.
 - Doplnených 9 stavových krokov (Hotové, Aktuálny krok, Dostupné, Zamknuté, Vyžaduje kontrolu, Chyba) pre navigáciu manažéra.
 - Pridané bezpečné odkazy na existujúce moduly a akcie workflow bez zásahu do business logiky.

@@ -136,6 +136,39 @@ if ( ! function_exists( 'toptour_ct_translate_placeholder_text' ) ) {
 	}
 }
 
+if ( ! function_exists( 'toptour_ct_get_discovery_summary_counts' ) ) {
+	function toptour_ct_get_discovery_summary_counts( $task_id, $latest_run = null ) {
+		global $wpdb;
+
+		$task_id = absint( $task_id );
+		$query_seed_count = 0;
+		if ( $latest_run && ! empty( $latest_run->search_queries ) ) {
+			$decoded_queries = json_decode( (string) $latest_run->search_queries, true );
+			$query_seed_count = is_array( $decoded_queries ) ? count( $decoded_queries ) : 0;
+		}
+
+		$sources_table = Toptour_Ref_Reference_Sources::get_table_name();
+		$facilities_table = Toptour_Ref_Facilities::get_table_name();
+		$findings_table = Toptour_Ref_Findings::get_table_name();
+		$photo_table = Toptour_Ref_Photo_Evidence::get_table_name();
+		$facility_note_like = '%generated_from_task_id:' . $task_id . '%';
+
+		$source_count = (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM $sources_table WHERE collection_task_id = %d AND source_origin = %s AND suggestion_status = %s", $task_id, 'manual_discovery', 'manager_review' ) );
+		$facility_count = (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM $facilities_table WHERE notes LIKE %s AND status = %s", $facility_note_like, 'draft' ) );
+		$finding_count = (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM $findings_table WHERE related_collection_task_id = %d AND status = %s", $task_id, 'pending_review' ) );
+		$photo_count = (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM $photo_table WHERE related_collection_task_id = %d AND verification_status = %s", $task_id, 'new' ) );
+
+		return [
+			'query_seed_count' => $query_seed_count,
+			'source_count' => $source_count,
+			'facility_count' => $facility_count,
+			'finding_count' => $finding_count,
+			'photo_count' => $photo_count,
+			'pending_count' => $source_count + $finding_count + $photo_count,
+		];
+	}
+}
+
 $base_url    = admin_url( 'admin.php?page=toptour-references-collection' );
 $action      = isset( $_GET['toptour_action'] ) ? sanitize_text_field( wp_unslash( $_GET['toptour_action'] ) ) : '';
 $edit_id     = isset( $_GET['task_id'] ) ? absint( $_GET['task_id'] ) : 0;
@@ -630,6 +663,7 @@ $has_errors = false;
 $has_latest_run = ( $latest_run && ! empty( $latest_run->id ) );
 
 if ( $is_task_detail ) {
+	$is_discovery_task = Toptour_Ref_Collection_Task_Resolver::is_discovery_task( $edit_task );
 	$has_context =
 		( '' !== trim( (string) ( $edit_task->task_title ?? '' ) ) ) ||
 		( '' !== trim( (string) ( $edit_task->query_text ?? '' ) ) ) ||
@@ -637,7 +671,8 @@ if ( $is_task_detail ) {
 		( (int) ( $edit_task->target_id ?? 0 ) > 0 ) ||
 		( (int) ( $edit_task->destination_id ?? 0 ) > 0 ) ||
 		( (int) ( $edit_task->supplier_id ?? 0 ) > 0 ) ||
-		( (int) ( $edit_task->offer_id ?? 0 ) > 0 );
+		( (int) ( $edit_task->offer_id ?? 0 ) > 0 ) ||
+		$is_discovery_task;
 
 	$has_findings = ( (int) ( $task_stats['total_found'] ?? 0 ) > 0 );
 	$needs_review = ( (int) ( $task_stats['pending_review'] ?? 0 ) > 0 );
@@ -1055,6 +1090,10 @@ if ( $is_task_detail ) {
 
 			<?php if ( $form_id && $edit_task ) : ?>
 				<p class="description">
+					<strong><?php esc_html_e( 'ID úlohy:', 'toptour-reference-finder' ); ?></strong> <?php echo esc_html( '#' . (int) $edit_task->id ); ?>
+					&nbsp;|&nbsp;
+					<strong><?php esc_html_e( 'Discovery režim:', 'toptour-reference-finder' ); ?></strong> <?php echo esc_html( Toptour_Ref_Collection_Task_Resolver::is_discovery_task( $edit_task ) ? __( 'áno', 'toptour-reference-finder' ) : __( 'nie', 'toptour-reference-finder' ) ); ?>
+					&nbsp;|&nbsp;
 					<?php esc_html_e( 'Pokusy:', 'toptour-reference-finder' ); ?> <strong><?php echo esc_html( $edit_task->attempts ); ?></strong>
 					&nbsp;|&nbsp;
 					<?php esc_html_e( 'Vytvorené:', 'toptour-reference-finder' ); ?> <strong><?php echo esc_html( $edit_task->created_at ); ?></strong>
@@ -1402,6 +1441,21 @@ if ( $is_task_detail ) {
 				<div style="margin-top: 24px; background: #fff; border: 1px solid #dcdcde; padding: 16px;">
 					<h2><?php esc_html_e( 'Detail úlohy (MVP)', 'toptour-reference-finder' ); ?></h2>
 					<p>
+						<strong><?php esc_html_e( 'ID úlohy:', 'toptour-reference-finder' ); ?></strong> <?php echo esc_html( '#' . (int) $edit_task->id ); ?>
+						| <strong><?php esc_html_e( 'Discovery režim:', 'toptour-reference-finder' ); ?></strong> <?php echo esc_html( Toptour_Ref_Collection_Task_Resolver::is_discovery_task( $edit_task ) ? __( 'áno', 'toptour-reference-finder' ) : __( 'nie', 'toptour-reference-finder' ) ); ?>
+						| <strong><?php esc_html_e( 'Typ cieľa:', 'toptour-reference-finder' ); ?></strong> <?php echo esc_html( Toptour_Ref_Labels::target_type_label( $edit_task->target_type ?? 'general' ) ); ?>
+						| <strong><?php esc_html_e( 'ID cieľa:', 'toptour-reference-finder' ); ?></strong> <?php echo esc_html( (int) ( $edit_task->target_id ?? 0 ) ); ?>
+					</p>
+					<?php $discovery_summary = toptour_ct_get_discovery_summary_counts( (int) $edit_task->id, $latest_run ); ?>
+					<p>
+						<strong><?php esc_html_e( 'Query seeds:', 'toptour-reference-finder' ); ?></strong> <?php echo esc_html( (int) $discovery_summary['query_seed_count'] ); ?>
+						| <strong><?php esc_html_e( 'Zdrojové kandidáty:', 'toptour-reference-finder' ); ?></strong> <?php echo esc_html( (int) $discovery_summary['source_count'] ); ?>
+						| <strong><?php esc_html_e( 'Kandidátske zariadenia:', 'toptour-reference-finder' ); ?></strong> <?php echo esc_html( (int) $discovery_summary['facility_count'] ); ?>
+						| <strong><?php esc_html_e( 'Zistenia:', 'toptour-reference-finder' ); ?></strong> <?php echo esc_html( (int) $discovery_summary['finding_count'] ); ?>
+						| <strong><?php esc_html_e( 'Fotodôkazy:', 'toptour-reference-finder' ); ?></strong> <?php echo esc_html( (int) $discovery_summary['photo_count'] ); ?>
+						| <strong><?php esc_html_e( 'Čaká na review:', 'toptour-reference-finder' ); ?></strong> <?php echo esc_html( (int) $discovery_summary['pending_count'] ); ?>
+					</p>
+					<p>
 						<strong><?php esc_html_e( 'Úloha:', 'toptour-reference-finder' ); ?></strong> <?php echo esc_html( $edit_task->task_title ); ?>
 						| <strong><?php esc_html_e( 'Stav úlohy:', 'toptour-reference-finder' ); ?></strong> <?php echo esc_html( Toptour_Ref_Labels::task_status_label( $detail_task_status ) ); ?>
 						| <strong><?php esc_html_e( 'Stav posledného behu:', 'toptour-reference-finder' ); ?></strong> <?php echo esc_html( $latest_task_run_status ); ?>
@@ -1609,6 +1663,7 @@ if ( $is_task_detail ) {
 		<table class="wp-list-table widefat fixed striped">
 			<thead>
 				<tr>
+					<th><?php esc_html_e( 'ID', 'toptour-reference-finder' ); ?></th>
 					<th><?php esc_html_e( 'Názov úlohy', 'toptour-reference-finder' ); ?></th>
 					<th><?php esc_html_e( 'Destinácia', 'toptour-reference-finder' ); ?></th>
 					<th><?php esc_html_e( 'Stav', 'toptour-reference-finder' ); ?></th>
@@ -1631,6 +1686,7 @@ if ( $is_task_detail ) {
 					$archive_url = wp_nonce_url( add_query_arg( [ 'toptour_action' => 'archive', 'task_id' => $task->id ], $base_url ), 'toptour_archive_task_' . $task->id );
 					?>
 					<tr>
+						<td><?php echo esc_html( (int) $task->id ); ?></td>
 						<td><?php echo esc_html( $task->task_title ); ?></td>
 						<td><?php echo esc_html( Toptour_Ref_Collection_Tasks::get_destination_label( $task ) ); ?></td>
 						<td><?php echo esc_html( Toptour_Ref_Labels::task_status_label( $task->task_status ) ); ?></td>
@@ -1650,7 +1706,7 @@ if ( $is_task_detail ) {
 					</tr>
 				<?php endforeach; ?>
 			<?php else : ?>
-				<tr><td colspan="10"><?php esc_html_e( 'Žiadne záznamy.', 'toptour-reference-finder' ); ?></td></tr>
+				<tr><td colspan="11"><?php esc_html_e( 'Žiadne záznamy.', 'toptour-reference-finder' ); ?></td></tr>
 			<?php endif; ?>
 			</tbody>
 		</table>

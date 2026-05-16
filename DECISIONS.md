@@ -1,5 +1,12 @@
 # DECISIONS: TOPTOUR Reference Finder
 
+## Decision: Facility task with zero target id can be discovery
+
+**Status:** Schvalene
+**Date:** 2026-05-16
+
+Collection task with target_type = facility and target_id = 0 is valid as discovery task when task text provides destination/signal context. The system may generate query seeds, candidate sources, candidate facilities and pending findings linked back to the task.
+
 ## Decision: Procesna mapa na stranke Zber referencii
 
 **Status:** Schvalene
