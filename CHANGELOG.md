@@ -1,4 +1,9 @@
 
+## 0.2.10
+- Pridaná procesná mapa workflow krokov na stránku Zber referencií.
+- Doplnených 9 stavových krokov (Hotové, Aktuálny krok, Dostupné, Zamknuté, Vyžaduje kontrolu, Chyba) pre navigáciu manažéra.
+- Pridané bezpečné odkazy na existujúce moduly a akcie workflow bez zásahu do business logiky.
+
 ## 0.2.9
 - Pridaná automatizácia search-intake pre Collection Task cez akciu „Vyhľadať a zapísať reálne dáta“.
 - `Task Processor` už negeneruje placeholder findings/snapshots pre realný intake flow.

@@ -1,5 +1,13 @@
 # DECISIONS: TOPTOUR Reference Finder
 
+## Decision: Procesna mapa na stranke Zber referencii
+
+**Status:** Schvalene
+**Date:** 2026-05-16
+
+Stranka Zber referencii obsahuje procesnu mapu ako riadiaci prvok admin prostredia.
+Mapa vedie manazera postupnostou krokov a zamknute kroky brania preskakovaniu logickych predpokladov.
+
 ## Decision: Search Intake automation pre Collection Task
 
 **Status:** Schvalene

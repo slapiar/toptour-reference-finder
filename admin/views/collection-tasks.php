@@ -577,6 +577,143 @@ if ( $edit_task ) {
 		$candidates = Toptour_Ref_Discovery_Candidates::get_candidates_for_run( (int) $latest_run->id );
 	}
 }
+
+$collection_admin_url = admin_url( 'admin.php' );
+$collection_page_url = add_query_arg(
+	[
+		'page' => 'toptour-references-collection',
+	],
+	$collection_admin_url
+);
+$findings_page_url = add_query_arg(
+	[
+		'page' => 'toptour-references-findings',
+	],
+	$collection_admin_url
+);
+$offers_page_url = add_query_arg(
+	[
+		'page' => 'toptour-references-offers',
+	],
+	$collection_admin_url
+);
+$facilities_page_url = add_query_arg(
+	[
+		'page' => 'toptour-references-facilities',
+	],
+	$collection_admin_url
+);
+$destinations_page_url = add_query_arg(
+	[
+		'page' => 'toptour-references-destinations',
+	],
+	$collection_admin_url
+);
+$photo_evidence_page_url = add_query_arg(
+	[
+		'page' => 'toptour-references-photo-evidence',
+	],
+	$collection_admin_url
+);
+$settings_page_url = add_query_arg(
+	[
+		'page' => 'toptour-references-settings',
+	],
+	$collection_admin_url
+);
+
+$is_task_detail = ( $edit_task && $edit_id > 0 );
+$has_context = false;
+$has_findings = false;
+$needs_review = false;
+$has_errors = false;
+$has_latest_run = ( $latest_run && ! empty( $latest_run->id ) );
+
+if ( $is_task_detail ) {
+	$has_context =
+		( '' !== trim( (string) ( $edit_task->task_title ?? '' ) ) ) ||
+		( '' !== trim( (string) ( $edit_task->query_text ?? '' ) ) ) ||
+		( '' !== trim( (string) ( $edit_task->notes ?? '' ) ) ) ||
+		( (int) ( $edit_task->target_id ?? 0 ) > 0 ) ||
+		( (int) ( $edit_task->destination_id ?? 0 ) > 0 ) ||
+		( (int) ( $edit_task->supplier_id ?? 0 ) > 0 ) ||
+		( (int) ( $edit_task->offer_id ?? 0 ) > 0 );
+
+	$has_findings = ( (int) ( $task_stats['total_found'] ?? 0 ) > 0 );
+	$needs_review = ( (int) ( $task_stats['pending_review'] ?? 0 ) > 0 );
+	$has_errors = ( (int) ( $task_stats['error_count'] ?? 0 ) > 0 );
+}
+
+$step_states = [
+	1 => 'available',
+	2 => 'locked',
+	3 => 'locked',
+	4 => 'locked',
+	5 => 'locked',
+	6 => 'available',
+	7 => 'available',
+	8 => 'available',
+	9 => 'available',
+];
+
+$current_step = 1;
+
+if ( $is_task_detail ) {
+	$step_states[1] = 'done';
+	$step_states[2] = $has_context ? 'done' : 'available';
+	$step_states[3] = 'available';
+	$step_states[4] = $has_errors && ! $has_findings ? 'error' : 'available';
+	$step_states[5] = 'available';
+	if ( $has_findings ) {
+		$step_states[6] = $needs_review ? 'review' : 'done';
+		$step_states[7] = 'available';
+		$step_states[8] = $needs_review ? 'review' : 'available';
+	} else {
+		$step_states[6] = 'locked';
+		$step_states[7] = 'locked';
+		$step_states[8] = 'locked';
+	}
+	$step_states[9] = 'available';
+
+	if ( ! $has_context ) {
+		$current_step = 2;
+	} elseif ( ! $has_latest_run ) {
+		$current_step = 3;
+	} elseif ( ! $has_findings ) {
+		$current_step = 4;
+	} elseif ( $needs_review ) {
+		$current_step = 8;
+	} else {
+		$current_step = 9;
+	}
+}
+
+if ( isset( $step_states[ $current_step ] ) && in_array( $step_states[ $current_step ], [ 'available', 'review', 'error' ], true ) ) {
+	$step_states[ $current_step ] = 'current';
+}
+
+$state_labels = [
+	'done' => 'Hotové',
+	'current' => 'Aktuálny krok',
+	'available' => 'Dostupné',
+	'locked' => 'Zamknuté',
+	'review' => 'Vyžaduje kontrolu',
+	'error' => 'Chyba',
+];
+
+$current_task_edit_url = '';
+$current_task_anchor_url = '';
+if ( $is_task_detail ) {
+	$current_task_edit_url = add_query_arg(
+		[
+			'page' => 'toptour-references-collection',
+			'toptour_action' => 'edit',
+			'task_id' => (int) $edit_task->id,
+		],
+		$collection_admin_url
+	);
+	$current_task_anchor_url = $current_task_edit_url . '#tt-ref-real-intake';
+}
 ?>
 
 <div class="wrap toptour-ref-collection-tasks">
@@ -597,6 +734,217 @@ if ( $edit_task ) {
 			<p><?php echo esc_html( $notice ); ?></p>
 		</div>
 	<?php endif; ?>
+
+	<section class="tt-ref-process-map" aria-label="Proces zberu referencií">
+		<div class="tt-ref-process-map__header">
+			<h2><?php esc_html_e( 'Proces zberu referencií', 'toptour-reference-finder' ); ?></h2>
+			<p><?php esc_html_e( 'Postupujte po krokoch. Zamknuté kroky sa sprístupnia až po splnení predchádzajúcich podmienok.', 'toptour-reference-finder' ); ?></p>
+		</div>
+
+		<div class="tt-ref-process-grid">
+			<?php $step_state = $step_states[1]; ?>
+			<article class="tt-ref-step tt-ref-step--<?php echo esc_attr( $step_state ); ?>">
+				<div class="tt-ref-step__head">
+					<span class="tt-ref-step__number" aria-hidden="true">1</span>
+					<div class="tt-ref-step__title-wrap">
+						<h3><?php esc_html_e( 'Návrh úlohy', 'toptour-reference-finder' ); ?></h3>
+						<span class="tt-ref-step__badge"><?php echo esc_html( $state_labels[ $step_state ] ); ?></span>
+					</div>
+				</div>
+				<p><?php esc_html_e( 'Vytvorí sa pracovný spis zberu referencií.', 'toptour-reference-finder' ); ?></p>
+				<p class="tt-ref-step__note"><em><?php esc_html_e( 'Tu sa pomenúva, čo má systém sledovať a prečo.', 'toptour-reference-finder' ); ?></em></p>
+				<div class="tt-ref-step__action">
+					<?php if ( $is_task_detail ) : ?>
+						<a class="button button-secondary" href="<?php echo esc_url( $current_task_edit_url ); ?>"><?php esc_html_e( 'Upraviť úlohu', 'toptour-reference-finder' ); ?></a>
+					<?php else : ?>
+						<a class="button button-secondary" href="<?php echo esc_url( add_query_arg( [ 'page' => 'toptour-references-collection', 'toptour_action' => 'add' ], $collection_admin_url ) ); ?>"><?php esc_html_e( 'Pridať úlohu', 'toptour-reference-finder' ); ?></a>
+					<?php endif; ?>
+				</div>
+			</article>
+
+			<?php $step_state = $step_states[2]; ?>
+			<article class="tt-ref-step tt-ref-step--<?php echo esc_attr( $step_state ); ?>">
+				<div class="tt-ref-step__head">
+					<span class="tt-ref-step__number" aria-hidden="true">2</span>
+					<div class="tt-ref-step__title-wrap">
+						<h3><?php esc_html_e( 'Cieľ a kontext', 'toptour-reference-finder' ); ?></h3>
+						<span class="tt-ref-step__badge"><?php echo esc_html( $state_labels[ $step_state ] ); ?></span>
+					</div>
+				</div>
+				<p><?php esc_html_e( 'Doplní sa cieľ, destinácia, zariadenie, ponuka, typ signálu a poznámky.', 'toptour-reference-finder' ); ?></p>
+				<p class="tt-ref-step__note"><em><?php esc_html_e( 'Čím presnejší kontext, tým lepšie sa budú triediť nálezy.', 'toptour-reference-finder' ); ?></em></p>
+				<div class="tt-ref-step__action">
+					<?php if ( 'locked' === $step_state ) : ?>
+						<span class="tt-ref-step__hint" aria-disabled="true"><?php esc_html_e( 'Najprv dokončite predchádzajúci krok.', 'toptour-reference-finder' ); ?></span>
+					<?php else : ?>
+						<a class="button button-secondary" href="<?php echo esc_url( $current_task_edit_url ); ?>"><?php esc_html_e( 'Upraviť úlohu', 'toptour-reference-finder' ); ?></a>
+					<?php endif; ?>
+				</div>
+			</article>
+
+			<?php $step_state = $step_states[3]; ?>
+			<article class="tt-ref-step tt-ref-step--<?php echo esc_attr( $step_state ); ?>">
+				<div class="tt-ref-step__head">
+					<span class="tt-ref-step__number" aria-hidden="true">3</span>
+					<div class="tt-ref-step__title-wrap">
+						<h3><?php esc_html_e( 'Vyhľadávacie dotazy', 'toptour-reference-finder' ); ?></h3>
+						<span class="tt-ref-step__badge"><?php echo esc_html( $state_labels[ $step_state ] ); ?></span>
+					</div>
+				</div>
+				<p><?php esc_html_e( 'Zo zadania úlohy sa pripravia dotazy pre reálny zber.', 'toptour-reference-finder' ); ?></p>
+				<p class="tt-ref-step__note"><em><?php esc_html_e( 'Systém z názvu, cieľa a poznámok pripraví otázky pre vyhľadanie zdrojov.', 'toptour-reference-finder' ); ?></em></p>
+				<div class="tt-ref-step__action">
+					<?php if ( 'locked' === $step_state ) : ?>
+						<span class="tt-ref-step__hint" aria-disabled="true"><?php esc_html_e( 'Najprv dokončite predchádzajúci krok.', 'toptour-reference-finder' ); ?></span>
+					<?php elseif ( $is_task_detail && $has_latest_run ) : ?>
+						<form method="post" action="<?php echo esc_url( $base_url ); ?>">
+							<?php wp_nonce_field( 'toptour_collection_discovery_action' ); ?>
+							<input type="hidden" name="toptour_ct_finder_submit" value="1">
+							<input type="hidden" name="finder_action" value="prepare_queries">
+							<input type="hidden" name="task_id" value="<?php echo esc_attr( (int) $edit_task->id ); ?>">
+							<input type="hidden" name="discovery_run_id" value="<?php echo esc_attr( (int) $latest_run->id ); ?>">
+							<button type="submit" class="button button-secondary"><?php esc_html_e( 'Pripraviť dotazy', 'toptour-reference-finder' ); ?></button>
+						</form>
+					<?php else : ?>
+						<span class="tt-ref-step__hint" aria-disabled="true"><?php esc_html_e( 'Najprv analyzujte zadanie úlohy.', 'toptour-reference-finder' ); ?></span>
+					<?php endif; ?>
+				</div>
+			</article>
+
+			<?php $step_state = $step_states[4]; ?>
+			<article class="tt-ref-step tt-ref-step--<?php echo esc_attr( $step_state ); ?>">
+				<div class="tt-ref-step__head">
+					<span class="tt-ref-step__number" aria-hidden="true">4</span>
+					<div class="tt-ref-step__title-wrap">
+						<h3><?php esc_html_e( 'Vyhľadať reálne URL', 'toptour-reference-finder' ); ?></h3>
+						<span class="tt-ref-step__badge"><?php echo esc_html( $state_labels[ $step_state ] ); ?></span>
+					</div>
+				</div>
+				<p><?php esc_html_e( 'Úloha vyhľadá alebo použije existujúce kandidátske URL.', 'toptour-reference-finder' ); ?></p>
+				<p class="tt-ref-step__note"><em><?php esc_html_e( 'Zdrojom môže byť ponuka, recenzia, článok, stránka zariadenia alebo verejný fotodôkaz.', 'toptour-reference-finder' ); ?></em></p>
+				<div class="tt-ref-step__action">
+					<?php if ( 'locked' === $step_state ) : ?>
+						<span class="tt-ref-step__hint" aria-disabled="true"><?php esc_html_e( 'Najprv dokončite predchádzajúci krok.', 'toptour-reference-finder' ); ?></span>
+					<?php elseif ( $is_task_detail ) : ?>
+						<form method="post" action="<?php echo esc_url( $base_url ); ?>">
+							<?php wp_nonce_field( 'toptour_collection_discovery_action' ); ?>
+							<input type="hidden" name="toptour_ct_finder_submit" value="1">
+							<input type="hidden" name="finder_action" value="search_intake">
+							<input type="hidden" name="task_id" value="<?php echo esc_attr( (int) $edit_task->id ); ?>">
+							<button type="submit" class="button button-primary"><?php esc_html_e( 'Vyhľadať a zapísať reálne dáta', 'toptour-reference-finder' ); ?></button>
+						</form>
+					<?php else : ?>
+						<span class="tt-ref-step__hint" aria-disabled="true"><?php esc_html_e( 'Najprv vyberte konkrétnu úlohu.', 'toptour-reference-finder' ); ?></span>
+					<?php endif; ?>
+				</div>
+			</article>
+
+			<?php $step_state = $step_states[5]; ?>
+			<article class="tt-ref-step tt-ref-step--<?php echo esc_attr( $step_state ); ?>">
+				<div class="tt-ref-step__head">
+					<span class="tt-ref-step__number" aria-hidden="true">5</span>
+					<div class="tt-ref-step__title-wrap">
+						<h3><?php esc_html_e( 'Reálny vstup dát', 'toptour-reference-finder' ); ?></h3>
+						<span class="tt-ref-step__badge"><?php echo esc_html( $state_labels[ $step_state ] ); ?></span>
+					</div>
+				</div>
+				<p><?php esc_html_e( 'Manažér môže vložiť konkrétnu URL a zaradiť ju cez Data Intake Router.', 'toptour-reference-finder' ); ?></p>
+				<p class="tt-ref-step__note"><em><?php esc_html_e( 'Toto je priama cesta, keď už poznáme konkrétny zdroj.', 'toptour-reference-finder' ); ?></em></p>
+				<div class="tt-ref-step__action">
+					<?php if ( 'locked' === $step_state ) : ?>
+						<span class="tt-ref-step__hint" aria-disabled="true"><?php esc_html_e( 'Najprv dokončite predchádzajúci krok.', 'toptour-reference-finder' ); ?></span>
+					<?php elseif ( $is_task_detail ) : ?>
+						<a class="button button-secondary" href="<?php echo esc_url( $current_task_anchor_url ); ?>"><?php esc_html_e( 'Otvoriť sekciu Reálny vstup dát', 'toptour-reference-finder' ); ?></a>
+					<?php else : ?>
+						<span class="tt-ref-step__hint" aria-disabled="true"><?php esc_html_e( 'Najprv vyberte konkrétnu úlohu.', 'toptour-reference-finder' ); ?></span>
+					<?php endif; ?>
+				</div>
+			</article>
+
+			<?php $step_state = $step_states[6]; ?>
+			<article class="tt-ref-step tt-ref-step--<?php echo esc_attr( $step_state ); ?>">
+				<div class="tt-ref-step__head">
+					<span class="tt-ref-step__number" aria-hidden="true">6</span>
+					<div class="tt-ref-step__title-wrap">
+						<h3><?php esc_html_e( 'Zistenia', 'toptour-reference-finder' ); ?></h3>
+						<span class="tt-ref-step__badge"><?php echo esc_html( $state_labels[ $step_state ] ); ?></span>
+					</div>
+				</div>
+				<p><?php esc_html_e( 'Z reálnych zdrojov vzniknú extrahované poznatky.', 'toptour-reference-finder' ); ?></p>
+				<p class="tt-ref-step__note"><em><?php esc_html_e( 'Manažér kontroluje pozitíva, riziká, rozpory a opakujúce sa signály.', 'toptour-reference-finder' ); ?></em></p>
+				<div class="tt-ref-step__action">
+					<?php if ( 'locked' === $step_state ) : ?>
+						<span class="tt-ref-step__hint" aria-disabled="true"><?php esc_html_e( 'Najprv dokončite predchádzajúci krok.', 'toptour-reference-finder' ); ?></span>
+					<?php else : ?>
+						<a class="button button-secondary" href="<?php echo esc_url( $findings_page_url ); ?>"><?php esc_html_e( 'Otvoriť Zistenia', 'toptour-reference-finder' ); ?></a>
+					<?php endif; ?>
+				</div>
+			</article>
+
+			<?php $step_state = $step_states[7]; ?>
+			<article class="tt-ref-step tt-ref-step--<?php echo esc_attr( $step_state ); ?>">
+				<div class="tt-ref-step__head">
+					<span class="tt-ref-step__number" aria-hidden="true">7</span>
+					<div class="tt-ref-step__title-wrap">
+						<h3><?php esc_html_e( 'Rozdelenie do modulov', 'toptour-reference-finder' ); ?></h3>
+						<span class="tt-ref-step__badge"><?php echo esc_html( $state_labels[ $step_state ] ); ?></span>
+					</div>
+				</div>
+				<p><?php esc_html_e( 'Dáta sa prepoja so zariadeniami, destináciami, ponukami, fotodôkazmi a referenčnými zdrojmi.', 'toptour-reference-finder' ); ?></p>
+				<p class="tt-ref-step__note"><em><?php esc_html_e( 'Cieľom nie je len nález, ale rozšírenie znalostnej mapy TOPTOUR.', 'toptour-reference-finder' ); ?></em></p>
+				<div class="tt-ref-step__action tt-ref-step__action-links">
+					<?php if ( 'locked' === $step_state ) : ?>
+						<span class="tt-ref-step__hint" aria-disabled="true"><?php esc_html_e( 'Najprv dokončite predchádzajúci krok.', 'toptour-reference-finder' ); ?></span>
+					<?php else : ?>
+						<a href="<?php echo esc_url( $offers_page_url ); ?>"><?php esc_html_e( 'Ponuky', 'toptour-reference-finder' ); ?></a>
+						<a href="<?php echo esc_url( $facilities_page_url ); ?>"><?php esc_html_e( 'Zariadenia', 'toptour-reference-finder' ); ?></a>
+						<a href="<?php echo esc_url( $destinations_page_url ); ?>"><?php esc_html_e( 'Destinácie', 'toptour-reference-finder' ); ?></a>
+						<a href="<?php echo esc_url( $photo_evidence_page_url ); ?>"><?php esc_html_e( 'Fotodôkazy', 'toptour-reference-finder' ); ?></a>
+					<?php endif; ?>
+				</div>
+			</article>
+
+			<?php $step_state = $step_states[8]; ?>
+			<article class="tt-ref-step tt-ref-step--<?php echo esc_attr( $step_state ); ?>">
+				<div class="tt-ref-step__head">
+					<span class="tt-ref-step__number" aria-hidden="true">8</span>
+					<div class="tt-ref-step__title-wrap">
+						<h3><?php esc_html_e( 'Manažérske rozhodnutie', 'toptour-reference-finder' ); ?></h3>
+						<span class="tt-ref-step__badge"><?php echo esc_html( $state_labels[ $step_state ] ); ?></span>
+					</div>
+				</div>
+				<p><?php esc_html_e( 'Manažér potvrdí, upraví, odmietne alebo doplní výsledky.', 'toptour-reference-finder' ); ?></p>
+				<p class="tt-ref-step__note"><em><?php esc_html_e( 'Systém navrhuje, človek rozhoduje.', 'toptour-reference-finder' ); ?></em></p>
+				<div class="tt-ref-step__action">
+					<?php if ( 'locked' === $step_state ) : ?>
+						<span class="tt-ref-step__hint" aria-disabled="true"><?php esc_html_e( 'Najprv dokončite predchádzajúci krok.', 'toptour-reference-finder' ); ?></span>
+					<?php else : ?>
+						<a class="button button-secondary" href="<?php echo esc_url( $findings_page_url ); ?>"><?php esc_html_e( 'Otvoriť Zistenia', 'toptour-reference-finder' ); ?></a>
+					<?php endif; ?>
+				</div>
+			</article>
+
+			<?php $step_state = $step_states[9]; ?>
+			<article class="tt-ref-step tt-ref-step--<?php echo esc_attr( $step_state ); ?>">
+				<div class="tt-ref-step__head">
+					<span class="tt-ref-step__number" aria-hidden="true">9</span>
+					<div class="tt-ref-step__title-wrap">
+						<h3><?php esc_html_e( 'Plán ďalšieho behu', 'toptour-reference-finder' ); ?></h3>
+						<span class="tt-ref-step__badge"><?php echo esc_html( $state_labels[ $step_state ] ); ?></span>
+					</div>
+				</div>
+				<p><?php esc_html_e( 'Úloha sa nastaví na manuálny alebo automatický režim podľa potreby.', 'toptour-reference-finder' ); ?></p>
+				<p class="tt-ref-step__note"><em><?php esc_html_e( 'V sezóne možno zvýšiť frekvenciu, pri reputačnom riziku sledovať častejšie.', 'toptour-reference-finder' ); ?></em></p>
+				<div class="tt-ref-step__action">
+					<?php if ( 'locked' === $step_state ) : ?>
+						<span class="tt-ref-step__hint" aria-disabled="true"><?php esc_html_e( 'Najprv dokončite predchádzajúci krok.', 'toptour-reference-finder' ); ?></span>
+					<?php else : ?>
+						<a class="button button-secondary" href="<?php echo esc_url( $settings_page_url ); ?>"><?php esc_html_e( 'Otvoriť Nastavenia', 'toptour-reference-finder' ); ?></a>
+					<?php endif; ?>
+				</div>
+			</article>
+		</div>
+	</section>
 
 	<?php if ( 'add' === $action || 'edit' === $action ) : ?>
 		<?php
@@ -736,7 +1084,7 @@ if ( $edit_task ) {
 				<?php submit_button( __( 'Vyhľadať a zapísať reálne dáta', 'toptour-reference-finder' ), 'primary', '', false ); ?>
 			</form>
 
-			<div style="background: #fff; border: 1px solid #dcdcde; padding: 12px; margin-bottom: 16px;">
+			<div id="tt-ref-real-intake" style="background: #fff; border: 1px solid #dcdcde; padding: 12px; margin-bottom: 16px;">
 				<h3><?php esc_html_e( 'Reálny vstup dát', 'toptour-reference-finder' ); ?></h3>
 				<form method="post" action="<?php echo esc_url( $base_url ); ?>">
 					<?php wp_nonce_field( 'toptour_collection_discovery_action' ); ?>
