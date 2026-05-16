@@ -331,14 +331,21 @@ class Toptour_Ref_AI_Outbox_Importer {
 	}
 
 	private static function import_structured_output( $task_id, $run_id, $payload, $structured ) {
-		$source_result = self::import_candidate_sources( $task_id, $structured['candidate_sources'] ?? [] );
+		$photo_rows = is_array( $structured['photo_evidence_candidates'] ?? null ) ? $structured['photo_evidence_candidates'] : [];
+		$source_rows = is_array( $structured['candidate_sources'] ?? null ) ? $structured['candidate_sources'] : [];
+		$finding_rows = is_array( $structured['pending_findings'] ?? null ) ? $structured['pending_findings'] : [];
+
+		$source_rows = array_merge( $source_rows, self::build_candidate_sources_from_photo_rows( $task_id, $photo_rows ) );
+		$finding_rows = array_merge( $finding_rows, self::build_pending_findings_from_photo_rows( $photo_rows ) );
+
+		$source_result = self::import_candidate_sources( $task_id, $source_rows );
 		$facility_result = self::import_candidate_facilities( $structured['candidate_facilities'] ?? [] );
 		$destination_result = self::import_candidate_destinations( $structured['candidate_destinations'] ?? [] );
 		$poi_result = self::import_candidate_points_of_interest( $structured['candidate_points_of_interest'] ?? [] );
 		$contact_result = self::import_candidate_contacts( $structured['candidate_contacts'] ?? [] );
 		$interest_result = self::import_candidate_interests( $structured['candidate_interests'] ?? [] );
-		$finding_result = self::import_pending_findings( $task_id, $run_id, $structured['pending_findings'] ?? [], $source_result['source_map'] ?? [] );
-		$photo_result = self::import_photo_candidates( $task_id, $structured['photo_evidence_candidates'] ?? [], $source_result['source_map'] ?? [], $finding_result['finding_map'] ?? [] );
+		$finding_result = self::import_pending_findings( $task_id, $run_id, $finding_rows, $source_result['source_map'] ?? [] );
+		$photo_result = self::import_photo_candidates( $task_id, $photo_rows, $source_result['source_map'] ?? [], $finding_result['finding_map'] ?? [] );
 
 		$error_count = absint( $source_result['errors'] ?? 0 ) + absint( $facility_result['errors'] ?? 0 ) + absint( $destination_result['errors'] ?? 0 ) + absint( $poi_result['errors'] ?? 0 ) + absint( $contact_result['errors'] ?? 0 ) + absint( $interest_result['errors'] ?? 0 ) + absint( $finding_result['errors'] ?? 0 ) + absint( $photo_result['errors'] ?? 0 );
 		$new_count = absint( $source_result['created'] ?? 0 ) + absint( $facility_result['created'] ?? 0 ) + absint( $destination_result['created'] ?? 0 ) + absint( $poi_result['created'] ?? 0 ) + absint( $contact_result['created'] ?? 0 ) + absint( $interest_result['created'] ?? 0 ) + absint( $finding_result['created'] ?? 0 ) + absint( $photo_result['created'] ?? 0 );
@@ -417,6 +424,86 @@ class Toptour_Ref_AI_Outbox_Importer {
 				],
 			],
 		];
+	}
+
+	private static function build_candidate_sources_from_photo_rows( $task_id, $rows ) {
+		if ( ! is_array( $rows ) ) {
+			return [];
+		}
+
+		$candidates = [];
+		$seen_urls = [];
+		foreach ( $rows as $row ) {
+			if ( ! is_array( $row ) ) {
+				continue;
+			}
+
+			$url = esc_url_raw( (string) ( $row['source_url'] ?? ( $row['evidence_url'] ?? '' ) ) );
+			if ( '' === $url || isset( $seen_urls[ $url ] ) ) {
+				continue;
+			}
+
+			$seen_urls[ $url ] = true;
+			$candidates[] = [
+				'source_id' => absint( $row['source_id'] ?? 0 ),
+				'title' => sanitize_text_field( (string) ( $row['source_title'] ?? self::fallback_title_from_url( $url ) ) ),
+				'url' => $url,
+				'platform' => sanitize_text_field( (string) ( $row['platform'] ?? self::platform_from_url( $url ) ) ),
+				'status' => sanitize_text_field( (string) ( $row['status'] ?? 'pending_review' ) ),
+				'task_id' => absint( $task_id ),
+				'facility_id' => absint( $row['facility_id'] ?? 0 ),
+				'destination_id' => absint( $row['destination_id'] ?? 0 ),
+				'notes' => self::append_note( (string) ( $row['notes'] ?? '' ), 'Derived source from photo candidate' ),
+			];
+		}
+
+		return $candidates;
+	}
+
+	private static function build_pending_findings_from_photo_rows( $rows ) {
+		if ( ! is_array( $rows ) ) {
+			return [];
+		}
+
+		$findings = [];
+		$seen = [];
+		foreach ( $rows as $row ) {
+			if ( ! is_array( $row ) ) {
+				continue;
+			}
+
+			$summary = sanitize_textarea_field( (string) ( $row['summary'] ?? '' ) );
+			if ( '' === $summary ) {
+				$summary = sanitize_textarea_field( (string) ( $row['observation_summary'] ?? '' ) );
+			}
+			$url = esc_url_raw( (string) ( $row['source_url'] ?? ( $row['evidence_url'] ?? '' ) ) );
+			if ( '' === $summary ) {
+				$summary = '' !== $url
+					? 'Photo evidence candidate detected at ' . self::fallback_title_from_url( $url )
+					: 'Photo evidence candidate requires manual review';
+			}
+
+			$key = md5( strtolower( trim( $summary ) ) . '|' . strtolower( trim( $url ) ) );
+			if ( isset( $seen[ $key ] ) ) {
+				continue;
+			}
+			$seen[ $key ] = true;
+
+			$findings[] = [
+				'source_id' => absint( $row['source_id'] ?? 0 ),
+				'source_url' => $url,
+				'facility_id' => absint( $row['facility_id'] ?? 0 ),
+				'destination_id' => absint( $row['destination_id'] ?? 0 ),
+				'category' => sanitize_key( (string) ( $row['finding_area'] ?? 'photos' ) ),
+				'summary' => $summary,
+				'status' => 'pending_review',
+				'evidence_type' => 'text',
+				'finding_type' => 'neutral',
+				'notes' => self::append_note( (string) ( $row['notes'] ?? '' ), 'Derived finding from photo candidate' ),
+			];
+		}
+
+		return $findings;
 	}
 
 	private static function append_import_report( $row ) {
