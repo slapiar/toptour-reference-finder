@@ -949,6 +949,10 @@ class Toptour_Ref_AI_Outbox_Importer {
 
 			$legacy_source_id = absint( $row['source_id'] ?? 0 );
 			$source_id = $legacy_source_id > 0 && isset( $source_map[ $legacy_source_id ] ) ? absint( $source_map[ $legacy_source_id ] ) : absint( $legacy_source_id );
+			$source_url_hint = esc_url_raw( (string) ( $row['source_url'] ?? '' ) );
+			if ( $source_id <= 0 && '' !== $source_url_hint ) {
+				$source_id = self::find_existing_source_id( $source_url_hint );
+			}
 			$source = $source_id > 0 ? Toptour_Ref_Reference_Sources::get_source( $source_id ) : null;
 
 			$facility_id = absint( $row['facility_id'] ?? 0 );
@@ -967,7 +971,17 @@ class Toptour_Ref_AI_Outbox_Importer {
 				$finding_area = 'other';
 			}
 
-			$source_url = $source && ! empty( $source->source_url ) ? (string) $source->source_url : '';
+			$source_url = $source && ! empty( $source->source_url ) ? (string) $source->source_url : $source_url_hint;
+			$source_title = $source && ! empty( $source->source_title ) ? (string) $source->source_title : sanitize_text_field( (string) ( $row['source_title'] ?? '' ) );
+			$source_type = $source && ! empty( $source->source_type ) ? (string) $source->source_type : sanitize_key( (string) ( $row['source_type'] ?? 'other' ) );
+			$evidence_type = sanitize_key( (string) ( $row['evidence_type'] ?? 'text' ) );
+			if ( ! in_array( $evidence_type, Toptour_Ref_Findings::get_allowed_evidence_types(), true ) ) {
+				$evidence_type = 'text';
+			}
+			$finding_type = sanitize_key( (string) ( $row['finding_type'] ?? 'neutral' ) );
+			if ( ! in_array( $finding_type, Toptour_Ref_Findings::get_allowed_finding_types(), true ) ) {
+				$finding_type = 'neutral';
+			}
 			$dedupe_hash = self::build_finding_dedupe_hash( $task_id, $source_url, $summary, $target_type, $target_id );
 			$existing_finding_id = self::find_existing_finding_id_by_hash( $dedupe_hash );
 			if ( $existing_finding_id <= 0 ) {
@@ -986,8 +1000,8 @@ class Toptour_Ref_AI_Outbox_Importer {
 				'task_id' => absint( $task_id ),
 				'run_id' => absint( $run_id ),
 				'source_url' => $source_url,
-				'source_title' => $source && ! empty( $source->source_title ) ? (string) $source->source_title : '',
-				'source_type' => $source && ! empty( $source->source_type ) ? (string) $source->source_type : 'other',
+				'source_title' => $source_title,
+				'source_type' => $source_type,
 				'excerpt' => $summary,
 				'detected_sentiment' => 'neutral',
 				'review_published_at' => '',
@@ -1015,20 +1029,20 @@ class Toptour_Ref_AI_Outbox_Importer {
 				'signal_pattern_id' => 0,
 				'target_type' => $target_type,
 				'target_id' => $target_id,
-				'finding_type' => 'neutral',
+				'finding_type' => $finding_type,
 				'finding_area' => $finding_area,
 				'signal_strength' => 'medium',
 				'repetition_level' => 'single',
 				'verification_status' => 'new',
-				'evidence_type' => 'text',
+				'evidence_type' => $evidence_type,
 				'evidence_excerpt' => $summary,
 				'evidence_url' => $source_url,
 				'observed_at' => current_time( 'mysql' ),
 				'reviewer_name' => '',
 				'reviewer_origin' => '',
-				'language' => '',
+				'language' => sanitize_text_field( (string) ( $row['language'] ?? '' ) ),
 				'related_collection_task_id' => absint( $task_id ),
-				'notes' => sanitize_textarea_field( (string) ( $row['notes'] ?? '' ) ),
+				'notes' => self::append_note( sanitize_textarea_field( (string) ( $row['notes'] ?? '' ) ), 'AI pending_review import' ),
 			];
 
 			$data = Toptour_Ref_Findings::sanitize_finding_data( $input );
@@ -1078,39 +1092,102 @@ class Toptour_Ref_AI_Outbox_Importer {
 
 			$source_url = esc_url_raw( (string) ( $row['source_url'] ?? '' ) );
 			if ( '' === $source_url ) {
+				$source_url = esc_url_raw( (string) ( $row['evidence_url'] ?? '' ) );
+			}
+			if ( '' === $source_url ) {
 				$result['errors']++;
 				continue;
 			}
 
 			$legacy_source_id = absint( $row['source_id'] ?? 0 );
 			$source_id = $legacy_source_id > 0 && isset( $source_map[ $legacy_source_id ] ) ? absint( $source_map[ $legacy_source_id ] ) : absint( $legacy_source_id );
+			if ( $source_id <= 0 ) {
+				$source_id = self::find_existing_source_id( $source_url );
+			}
 			$finding_id = $legacy_source_id > 0 && isset( $finding_map[ $legacy_source_id ] ) ? absint( $finding_map[ $legacy_source_id ] ) : 0;
+			if ( $finding_id <= 0 ) {
+				$finding_id = absint( $row['finding_id'] ?? 0 );
+			}
 
 			$facility_id = absint( $row['facility_id'] ?? 0 );
 			$destination_id = absint( $row['destination_id'] ?? 0 );
 			$target_type = $facility_id > 0 ? 'facility' : ( $destination_id > 0 ? 'destination' : 'general' );
 			$target_id = $facility_id > 0 ? $facility_id : $destination_id;
 
+			if ( $finding_id <= 0 ) {
+				$finding_id = self::find_existing_finding_id_for_photo( $task_id, $source_id, $source_url, $target_type, $target_id );
+			}
+
+			if ( $finding_id > 0 ) {
+				$finding = Toptour_Ref_Findings::get_finding( $finding_id );
+				if ( $finding ) {
+					if ( 'general' === $target_type && ! empty( $finding->target_type ) ) {
+						$target_type = sanitize_key( (string) $finding->target_type );
+						$target_id = absint( $finding->target_id ?? 0 );
+					}
+					if ( $source_id <= 0 && ! empty( $finding->source_id ) ) {
+						$source_id = absint( $finding->source_id );
+					}
+				}
+			}
+
+			$photo_type = sanitize_key( (string) ( $row['photo_type'] ?? 'platform_photo' ) );
+			if ( ! in_array( $photo_type, Toptour_Ref_Photo_Evidence::get_allowed_photo_types(), true ) ) {
+				$photo_type = 'platform_photo';
+			}
+
+			$comparison_category = sanitize_key( (string) ( $row['comparison_category'] ?? 'unknown' ) );
+			if ( ! in_array( $comparison_category, Toptour_Ref_Photo_Evidence::get_allowed_comparison_categories(), true ) ) {
+				$comparison_category = 'unknown';
+			}
+
+			$visual_area = sanitize_key( (string) ( $row['visual_area'] ?? '' ) );
+			if ( '' === $visual_area || ! in_array( $visual_area, Toptour_Ref_Photo_Evidence::get_allowed_visual_areas(), true ) ) {
+				$visual_area = 'other';
+			}
+
+			$verification_status = sanitize_key( (string) ( $row['verification_status'] ?? 'new' ) );
+			if ( ! in_array( $verification_status, Toptour_Ref_Photo_Evidence::get_allowed_verification_statuses(), true ) ) {
+				$verification_status = 'new';
+			}
+
+			$signal_strength = sanitize_key( (string) ( $row['signal_strength'] ?? 'medium' ) );
+			if ( ! in_array( $signal_strength, Toptour_Ref_Photo_Evidence::get_allowed_signal_strengths(), true ) ) {
+				$signal_strength = 'medium';
+			}
+
+			$evidence_title = sanitize_text_field( (string) ( $row['evidence_title'] ?? '' ) );
+			if ( '' === $evidence_title ) {
+				$evidence_title = 'AI photo evidence candidate';
+			}
+
+			$observation_summary = sanitize_textarea_field( (string) ( $row['observation_summary'] ?? '' ) );
+			if ( '' === $observation_summary ) {
+				$observation_summary = sanitize_textarea_field( (string) ( $row['summary'] ?? '' ) );
+			}
+			$visible_details = sanitize_textarea_field( (string) ( $row['visible_details'] ?? '' ) );
+			$contradiction_note = sanitize_textarea_field( (string) ( $row['contradiction_note'] ?? '' ) );
+
 			$input = [
-				'evidence_title' => 'AI photo evidence candidate',
+				'evidence_title' => $evidence_title,
 				'source_id' => $source_id,
 				'finding_id' => $finding_id,
 				'target_type' => $target_type,
 				'target_id' => $target_id,
-				'photo_type' => 'platform_photo',
-				'comparison_category' => 'unknown',
-				'visual_area' => 'other',
+				'photo_type' => $photo_type,
+				'comparison_category' => $comparison_category,
+				'visual_area' => $visual_area,
 				'evidence_url' => $source_url,
-				'thumbnail_url' => '',
+				'thumbnail_url' => esc_url_raw( (string) ( $row['thumbnail_url'] ?? '' ) ),
 				'official_reference_url' => '',
-				'guest_reference_url' => '',
-				'observation_summary' => '',
-				'visible_details' => '',
-				'contradiction_note' => '',
-				'verification_status' => 'new',
-				'signal_strength' => 'medium',
-				'observed_at' => current_time( 'mysql' ),
-				'language' => '',
+				'guest_reference_url' => esc_url_raw( (string) ( $row['guest_reference_url'] ?? '' ) ),
+				'observation_summary' => $observation_summary,
+				'visible_details' => $visible_details,
+				'contradiction_note' => $contradiction_note,
+				'verification_status' => $verification_status,
+				'signal_strength' => $signal_strength,
+				'observed_at' => sanitize_text_field( str_replace( 'T', ' ', (string) ( $row['observed_at'] ?? current_time( 'mysql' ) ) ) ),
+				'language' => sanitize_text_field( (string) ( $row['language'] ?? '' ) ),
 				'related_collection_task_id' => absint( $task_id ),
 				'notes' => self::append_note( (string) ( $row['notes'] ?? '' ), 'AI pending visual review' ),
 			];
@@ -1136,6 +1213,63 @@ class Toptour_Ref_AI_Outbox_Importer {
 		}
 
 		return $result;
+	}
+
+	private static function find_existing_finding_id_for_photo( $task_id, $source_id, $source_url, $target_type, $target_id ) {
+		$task_id = absint( $task_id );
+		$source_id = absint( $source_id );
+		$source_url = esc_url_raw( (string) $source_url );
+		$target_type = sanitize_key( (string) $target_type );
+		$target_id = absint( $target_id );
+
+		if ( $task_id <= 0 ) {
+			return 0;
+		}
+
+		global $wpdb;
+		$table = Toptour_Ref_Findings::get_table_name();
+
+		if ( $source_id > 0 ) {
+			$id = $wpdb->get_var(
+				$wpdb->prepare(
+					"SELECT id FROM $table WHERE related_collection_task_id = %d AND source_id = %d ORDER BY id DESC LIMIT 1",
+					$task_id,
+					$source_id
+				)
+			);
+			if ( absint( $id ) > 0 ) {
+				return absint( $id );
+			}
+		}
+
+		if ( '' !== $source_url ) {
+			$id = $wpdb->get_var(
+				$wpdb->prepare(
+					"SELECT id FROM $table WHERE related_collection_task_id = %d AND source_url = %s ORDER BY id DESC LIMIT 1",
+					$task_id,
+					$source_url
+				)
+			);
+			if ( absint( $id ) > 0 ) {
+				return absint( $id );
+			}
+		}
+
+		if ( 'general' !== $target_type && $target_id > 0 ) {
+			$id = $wpdb->get_var(
+				$wpdb->prepare(
+					"SELECT id FROM $table WHERE related_collection_task_id = %d AND target_type = %s AND target_id = %d ORDER BY id DESC LIMIT 1",
+					$task_id,
+					$target_type,
+					$target_id
+				)
+			);
+			if ( absint( $id ) > 0 ) {
+				return absint( $id );
+			}
+		}
+
+		return 0;
 	}
 
 	private static function fallback_title_from_url( $url ) {
