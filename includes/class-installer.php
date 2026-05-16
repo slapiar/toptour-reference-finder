@@ -120,6 +120,41 @@ class Toptour_Ref_Installer {
 		KEY status (status)
 	) {$charset_collate};";
 
+		$tables[] = "CREATE TABLE {$wpdb->prefix}toptour_ref_offers (
+		id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+		facility_id bigint(20) unsigned DEFAULT 0,
+		destination_id bigint(20) unsigned DEFAULT 0,
+		reference_source_id bigint(20) unsigned DEFAULT 0,
+		offer_name varchar(255) NOT NULL,
+		offer_url text NULL,
+		offer_type varchar(80) DEFAULT 'general',
+		description_summary longtext NULL,
+		price_value decimal(12,2) NULL,
+		price_currency varchar(20) DEFAULT '',
+		price_note varchar(255) DEFAULT '',
+		stay_duration varchar(120) DEFAULT '',
+		persons_min int(10) unsigned DEFAULT 0,
+		persons_max int(10) unsigned DEFAULT 0,
+		meal_plan varchar(120) DEFAULT '',
+		transport_type varchar(120) DEFAULT '',
+		accommodation_type varchar(120) DEFAULT '',
+		season varchar(120) DEFAULT '',
+		valid_from datetime NULL,
+		valid_to datetime NULL,
+		status varchar(50) DEFAULT 'needs_review',
+		created_by bigint(20) unsigned DEFAULT 0,
+		created_at datetime NOT NULL,
+		updated_at datetime NOT NULL,
+		PRIMARY KEY  (id),
+		KEY facility_id (facility_id),
+		KEY destination_id (destination_id),
+		KEY reference_source_id (reference_source_id),
+		KEY offer_type (offer_type),
+		KEY status (status),
+		KEY valid_from (valid_from),
+		KEY valid_to (valid_to)
+	) {$charset_collate};";
+
 		$tables[] = "CREATE TABLE {$wpdb->prefix}toptour_ref_signal_patterns (
 		id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
 		pattern_key varchar(120) NOT NULL,

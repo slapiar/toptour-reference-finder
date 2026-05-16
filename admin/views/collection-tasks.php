@@ -141,6 +141,7 @@ $action      = isset( $_GET['toptour_action'] ) ? sanitize_text_field( wp_unslas
 $edit_id     = isset( $_GET['task_id'] ) ? absint( $_GET['task_id'] ) : 0;
 $notice      = '';
 $notice_type = 'success';
+$intake_result = null;
 $finder_mode = Toptour_Ref_Task_Processor::get_mode();
 
 if ( $action === 'archive' && $edit_id ) {
@@ -211,6 +212,23 @@ if ( $_SERVER['REQUEST_METHOD'] === 'POST' && isset( $_POST['toptour_ct_finder_s
 	$finder_action = sanitize_text_field( wp_unslash( $_POST['finder_action'] ?? '' ) );
 	$task_id = absint( $_POST['task_id'] ?? 0 );
 	$run_id = absint( $_POST['discovery_run_id'] ?? 0 );
+
+	if ( 'intake_source' === $finder_action && $task_id > 0 ) {
+		$intake_result = Toptour_Ref_Data_Intake_Router::process_manual_intake(
+			$task_id,
+			[
+				'source_url' => esc_url_raw( wp_unslash( $_POST['intake_source_url'] ?? '' ) ),
+				'input_type' => sanitize_text_field( wp_unslash( $_POST['intake_type'] ?? 'auto' ) ),
+				'manager_note' => sanitize_textarea_field( wp_unslash( $_POST['intake_manager_note'] ?? '' ) ),
+				'destination_id' => absint( $_POST['intake_destination_id'] ?? 0 ),
+				'facility_id' => absint( $_POST['intake_facility_id'] ?? 0 ),
+				'offer_id' => absint( $_POST['intake_offer_id'] ?? 0 ),
+			]
+		);
+
+		$notice = sanitize_text_field( $intake_result['message'] ?? '' );
+		$notice_type = ! empty( $intake_result['success'] ) ? 'success' : 'error';
+	}
 
 	if ( 'analyze_task' === $finder_action && $task_id > 0 ) {
 		$task = Toptour_Ref_Collection_Tasks::get_task( $task_id );
@@ -562,7 +580,7 @@ if ( $edit_task ) {
 
 <div class="wrap toptour-ref-collection-tasks">
 	<h1><?php esc_html_e( 'Zber referencií', 'toptour-reference-finder' ); ?></h1>
-	<p class="description"><?php esc_html_e( 'Kontrolovaný admin workflow pre discovery zdrojov. Bez automatického scrapingu, bez AI a bez verejného výstupu.', 'toptour-reference-finder' ); ?></p>
+	<p class="description"><?php esc_html_e( 'Kontrolovaný admin workflow pre discovery zdrojov a reálny intake verejných URL vstupov.', 'toptour-reference-finder' ); ?></p>
 	<div class="notice notice-info inline">
 		<p>
 			<?php if ( 'manual' === $finder_mode ) : ?>
@@ -716,6 +734,72 @@ if ( $edit_task ) {
 				<input type="hidden" name="task_id" value="<?php echo esc_attr( $form_id ); ?>">
 				<?php submit_button( __( 'Spustiť testovací beh', 'toptour-reference-finder' ), 'primary', '', false ); ?>
 			</form>
+
+			<div style="background: #fff; border: 1px solid #dcdcde; padding: 12px; margin-bottom: 16px;">
+				<h3><?php esc_html_e( 'Reálny vstup dát', 'toptour-reference-finder' ); ?></h3>
+				<form method="post" action="<?php echo esc_url( $base_url ); ?>">
+					<?php wp_nonce_field( 'toptour_collection_discovery_action' ); ?>
+					<input type="hidden" name="toptour_ct_finder_submit" value="1">
+					<input type="hidden" name="finder_action" value="intake_source">
+					<input type="hidden" name="task_id" value="<?php echo esc_attr( $form_id ); ?>">
+					<table class="form-table">
+						<tr>
+							<th><label for="intake_source_url"><?php esc_html_e( 'URL zdroja', 'toptour-reference-finder' ); ?> *</label></th>
+							<td><input type="url" id="intake_source_url" name="intake_source_url" class="regular-text" required placeholder="https://..." /></td>
+						</tr>
+						<tr>
+							<th><label for="intake_type"><?php esc_html_e( 'Typ vstupu', 'toptour-reference-finder' ); ?></label></th>
+							<td>
+								<select id="intake_type" name="intake_type">
+									<option value="auto"><?php esc_html_e( 'Auto', 'toptour-reference-finder' ); ?></option>
+									<option value="ponuka"><?php esc_html_e( 'Ponuka', 'toptour-reference-finder' ); ?></option>
+									<option value="zariadenie"><?php esc_html_e( 'Zariadenie', 'toptour-reference-finder' ); ?></option>
+									<option value="destinacia"><?php esc_html_e( 'Destinácia', 'toptour-reference-finder' ); ?></option>
+									<option value="referencia"><?php esc_html_e( 'Referencia', 'toptour-reference-finder' ); ?></option>
+									<option value="fotodokaz"><?php esc_html_e( 'Foto dôkaz', 'toptour-reference-finder' ); ?></option>
+									<option value="clanok"><?php esc_html_e( 'Článok', 'toptour-reference-finder' ); ?></option>
+									<option value="ine"><?php esc_html_e( 'Iné', 'toptour-reference-finder' ); ?></option>
+								</select>
+							</td>
+						</tr>
+						<tr>
+							<th><label for="intake_destination_id"><?php esc_html_e( 'Link destinácia ID', 'toptour-reference-finder' ); ?></label></th>
+							<td><input type="number" min="0" id="intake_destination_id" name="intake_destination_id" value="<?php echo esc_attr( (int) ( $edit_task->destination_id ?? 0 ) ); ?>" /></td>
+						</tr>
+						<tr>
+							<th><label for="intake_facility_id"><?php esc_html_e( 'Link zariadenie ID', 'toptour-reference-finder' ); ?></label></th>
+							<td><input type="number" min="0" id="intake_facility_id" name="intake_facility_id" value="<?php echo esc_attr( (int) ( $edit_task->supplier_id ?? 0 ) ); ?>" /></td>
+						</tr>
+						<tr>
+							<th><label for="intake_offer_id"><?php esc_html_e( 'Link ponuka ID', 'toptour-reference-finder' ); ?></label></th>
+							<td><input type="number" min="0" id="intake_offer_id" name="intake_offer_id" value="<?php echo esc_attr( (int) ( $edit_task->offer_id ?? 0 ) ); ?>" /></td>
+						</tr>
+						<tr>
+							<th><label for="intake_manager_note"><?php esc_html_e( 'Poznámka manažéra', 'toptour-reference-finder' ); ?></label></th>
+							<td><textarea id="intake_manager_note" name="intake_manager_note" rows="3" class="large-text"></textarea></td>
+						</tr>
+					</table>
+					<?php submit_button( __( 'Načítať a zaradiť dáta', 'toptour-reference-finder' ), 'primary', '', false ); ?>
+				</form>
+
+				<?php if ( is_array( $intake_result ) && isset( $intake_result['details'] ) ) : ?>
+					<?php $d = $intake_result['details']; ?>
+					<table class="widefat striped" style="margin-top: 10px;">
+						<tbody>
+							<tr><th><?php esc_html_e( 'Detekovaný typ', 'toptour-reference-finder' ); ?></th><td><?php echo esc_html( (string) ( $d['detected_type'] ?? '—' ) ); ?></td></tr>
+							<tr><th><?php esc_html_e( 'HTTP status', 'toptour-reference-finder' ); ?></th><td><?php echo esc_html( (string) ( $d['http_status'] ?? '0' ) ); ?></td></tr>
+							<tr><th><?php esc_html_e( 'Source vytvorený', 'toptour-reference-finder' ); ?></th><td><?php echo ! empty( $d['source_created'] ) ? 'YES' : 'NO'; ?></td></tr>
+							<tr><th><?php esc_html_e( 'Source aktualizovaný', 'toptour-reference-finder' ); ?></th><td><?php echo ! empty( $d['source_updated'] ) ? 'YES' : 'NO'; ?></td></tr>
+							<tr><th><?php esc_html_e( 'Finding vytvorený', 'toptour-reference-finder' ); ?></th><td><?php echo ! empty( $d['finding_created'] ) ? 'YES' : 'NO'; ?></td></tr>
+							<tr><th><?php esc_html_e( 'Offer vytvorený', 'toptour-reference-finder' ); ?></th><td><?php echo ! empty( $d['offer_created'] ) ? 'YES' : 'NO'; ?></td></tr>
+							<tr><th><?php esc_html_e( 'Offer aktualizovaný', 'toptour-reference-finder' ); ?></th><td><?php echo ! empty( $d['offer_updated'] ) ? 'YES' : 'NO'; ?></td></tr>
+							<tr><th><?php esc_html_e( 'Facility kandidát vytvorený', 'toptour-reference-finder' ); ?></th><td><?php echo ! empty( $d['facility_candidate_created'] ) ? 'YES' : 'NO'; ?></td></tr>
+							<tr><th><?php esc_html_e( 'Destination kandidát vytvorený', 'toptour-reference-finder' ); ?></th><td><?php echo ! empty( $d['destination_candidate_created'] ) ? 'YES' : 'NO'; ?></td></tr>
+							<tr><th><?php esc_html_e( 'Photo evidence vytvorený', 'toptour-reference-finder' ); ?></th><td><?php echo ! empty( $d['photo_evidence_created'] ) ? 'YES' : 'NO'; ?></td></tr>
+						</tbody>
+					</table>
+				<?php endif; ?>
+			</div>
 
 			<?php if ( $latest_run ) : ?>
 				<div style="background: #fff; border: 1px solid #dcdcde; padding: 12px; margin-bottom: 16px;">

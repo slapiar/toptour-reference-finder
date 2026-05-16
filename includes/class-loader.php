@@ -37,11 +37,13 @@ class Toptour_Ref_Loader {
 		require_once TOPTOUR_REF_PLUGIN_DIR . 'includes/class-installer.php';
 		require_once TOPTOUR_REF_PLUGIN_DIR . 'includes/class-capabilities.php';
 		require_once TOPTOUR_REF_PLUGIN_DIR . 'includes/class-labels.php';
+		require_once TOPTOUR_REF_PLUGIN_DIR . 'includes/class-offers.php';
 		require_once TOPTOUR_REF_PLUGIN_DIR . 'includes/class-collection-tasks.php';
 		require_once TOPTOUR_REF_PLUGIN_DIR . 'includes/class-task-runs.php';
 		require_once TOPTOUR_REF_PLUGIN_DIR . 'includes/class-task-events.php';
 		require_once TOPTOUR_REF_PLUGIN_DIR . 'includes/class-offer-snapshots.php';
 		require_once TOPTOUR_REF_PLUGIN_DIR . 'includes/class-task-processor.php';
+		require_once TOPTOUR_REF_PLUGIN_DIR . 'includes/class-data-intake-router.php';
 		require_once TOPTOUR_REF_PLUGIN_DIR . 'includes/class-facilities.php';
 		require_once TOPTOUR_REF_PLUGIN_DIR . 'includes/class-destinations.php';
 		require_once TOPTOUR_REF_PLUGIN_DIR . 'includes/class-facility-destinations.php';

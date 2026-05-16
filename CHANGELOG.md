@@ -1,4 +1,18 @@
 
+## 0.2.8
+- Stabilizačný release po merge vetvy `release/0.2.2` do `main`.
+- Zjednotená release história a tagy na hlavnej vetve.
+- Verzia pluginu navýšená na `0.2.8`.
+- DB schéma rozšírená o tabuľku `toptour_ref_offers` (`TOPTOUR_REF_DB_VERSION` = `0.2.3`).
+- Aktualizovaný projektový kontrakt v dokumentácii: plugin je interné manažérske prostredie pre reálny zber a analýzu verejne dostupných referenčných dát.
+- Poznámka k histórii: staré MVP/skeleton obmedzenia v starších sekciách changelogu sú historické a prekonané 0.2.x prevádzkovým kontraktom.
+- Pridaný prvý funkčný Data Intake Router pre manuálny vstup URL v detaile Collection Task.
+- Doplnená sekcia "Reálny vstup dát" s typizáciou vstupu, linkovaním entít a výsledkovým summary boxom.
+- Reálny intake vytvára/aktualizuje Reference Source, vytvára Findings a pri vizuálnych signáloch ukladá Photo Evidence odkazy.
+- Pri offer-like URL intake vytvára alebo aktualizuje Offer záznam a vytvára Offer Snapshot.
+- Doplnená auditná slovná zásoba task eventov pre intake lifecycle (`intake_started`, `intake_finished`, ...).
+- Menu "Ponuky" už nie je placeholder, ale samostatný admin modul nad tabuľkou offers.
+
 ## 0.2.5
 - Opravená frequency logika pre výpočet `next_run_at`: `twice_daily` = +12h, `three_times_daily` = +8h, `six_daily` = +4h.
 - Zjednodušený zoznam Findings na manažérske stĺpce a čitateľnejší hlavný stĺpec „Zistenie“ (názov, stručné zhrnutie, meta riadok).
@@ -162,6 +176,9 @@
 - Added filters, search and pagination for facilities.
 - Kept facilities as internal reference collection targets without scoring or public output.
 
+## Historicky archiv (0.1.x)
+Poznamka: nasledujuce zaznamy 0.1.x su historicke a nepredstavuju aktualny prevadzkovy kontrakt 0.2.x.
+
 ## 0.1.3
 - Added Collection Tasks admin screen.
 - Added manual create and edit support for reference collection tasks.
@@ -190,7 +207,7 @@ Všetky zmeny v TOPTOUR Reference Finder.
 - Added default signal pattern seeds.
 - Added collection tasks table as an internal work queue for reference collection planning.
 
-## 0.1.0 (2026-05-15)
+## 0.1.0 (2026-05-15) [historicky zaznam]
 
 ### Pridané
 

@@ -1,249 +1,68 @@
 # MANIFEST: TOPTOUR Reference Finder
 
-**Plugin Name:** TOPTOUR Reference Finder  
-**Slug:** toptour-reference-finder  
-**Version:** 0.2.3
-**Status:** Stabilization release (MVP foundations active)
+**Plugin Name:** TOPTOUR Reference Finder
+**Slug:** toptour-reference-finder
+**Version:** 0.2.8
+**Status:** Aktivny interny manazersky system
 **Author:** TOPTOUR
 
-## Architektonický popis
+## Prevadzkovy kontrakt
 
-TOPTOUR Reference Finder je interný WordPress plugin navrhnutý na **zber referencií, dôkazov a zistení z reálnych pobytov hostí**.
+TOPTOUR Reference Finder je interny pracovny system pre manazera cestovneho ruchu.
 
-Plugin **NETVRDÍ kvalitu**, **NEHODNOTÍ zariadenia** a **NEMÁ verejný frontend** v tejto verzii.
+System sluzi na:
 
-## Primárny princíp
+- evidenciu zariadeni a ubytovania,
+- evidenciu destinacii a lokalit,
+- evidenciu ponuk a dealov,
+- evidenciu referencnych zdrojov,
+- zber a analyzu verejne dostupnych referencnych dat,
+- zapis zisteni z recenzii, clankov, platforiem a fotiek hosti,
+- rozlisovanie pozitiv, rizik a rozporov,
+- vyhladavanie opakujucich sa signalov reality,
+- vytvaranie casovych zaznamov ponuk a zisteni,
+- pripravu podkladov pre neskorsie hodnotenie.
 
-> Najprv zbieramu dôkazy z reality.  
-> Až potom definujeme kritériá hodnotenia.
+Plugin nesluzi na rabovanie citlivych udajov, kontaktov hosti ani sukromnych dat.
+Plugin pracuje s verejne dostupnymi informaciami, verejnymi ponukami, verejnymi referenciami a vlastnymi analytickymi zisteniami TOPTOUR.
 
-Plugin zbiera:
-- Referenčné zdroje (platformy, články, odkazy)
-- Zistenia z recenzií a fotiek
-- Vizuálne dôkazy a pozorovania
-- Úlohy a prioritizáciu zberu
+## Prevadzkove pravidla
 
-Plugin **NEPRIDÁVA**:
-- Automatické hodnotenie
-- Verejné skóre
-- Marketing jazykové "vylepšovanie"
-- Lož o kvalite bez dôkazov
+- Realny zber dat je povoleny ako interny manazersky proces.
+- Externe HTTP volania su povolene, ak su sucastou schvaleneho zberoveho mechanizmu.
+- Automaticke planovane ulohy su povolene cez task lifecycle a cron.
+- CRUD moduly su sucastou systemu.
+- Databazove schemy su sucastou systemu.
+- Placeholdery nesmu byt vysledkom realneho zberu.
+- Testovacie zaznamy smu existovat iba ako diagnostika.
 
-## Dátový model (aktuálny základ)
+## Funkcna architektura
 
-Aktuálny databázový installer pripravuje základné tabuľky pre interný zber a discovery workflow:
+System je postaveny ako interny WordPress plugin s admin workflow.
 
-### toptour_ref_facilities
-Ubytovacia zariadení a ostatné zariadenia.
-```sql
-- id
-- name
-- slug
-- destination_id
-- facility_type (hotel, apartment, guesthouse, etc.)
-- description
-- added_date
-- last_updated
-```
+Hlavne domene a workflow vrstvy:
 
-### toptour_ref_destinations
-Mestá, regióny, krajiny.
-```sql
-- id
-- name
-- slug
-- country
-- region
-- description
-- added_date
-```
+- Collection Tasks: zadanie zberu a planovanie cyklu.
+- Task Runs: jednotlive behy zberu a analyzy.
+- Task Events: auditna historia operacii a rozhodnuti.
+- Findings: konkretne signaly a zistenia naviazane na zdroje a ciele.
+- Offer Snapshots: casove zaznamy verejne prezentovanych parametrov ponuk.
+- Reference Sources: evidencia zdrojov a ich kontextu.
+- Facilities, Destinations, Offers: pracovne entity manazerskeho prostredia.
 
-### toptour_ref_offers
-Ponuky, dealy, balíčky.
-```sql
-- id
-- name
-- slug
-- facility_id
-- destination_id
-- description
-- claim (čo ponuka tvrdi)
-- added_date
-```
+## Data governance
 
-### toptour_ref_sources
-Referenčné zdroje - kde sa berú dáta.
-```sql
-- id
-- offer_id / facility_id / destination_id
-- platform (Booking, TripAdvisor, Google, article_url, etc.)
-- source_type (review, photo, article, social_media, etc.)
-- url
-- source_date
-- credibility_rating
-- added_date
-```
+- Persistovane hodnoty enum ostavaju stabilne interne kluce.
+- Lokalizacia je prezenta vrstva, nie prepis databazovych hodnot.
+- Auditna stopa je povinna pre klucove zmeny vo workflow.
 
-### toptour_ref_findings
-Extrahované zistenia z recenzií a fotiek.
-```sql
-- id
-- source_id
-- facility_id / offer_id / destination_id
-- finding_type (positive, risk, contradiction, neutral)
-- area (cleanliness, service, comfort, price, location, etc.)
-- description
-- signal_strength (weak, medium, strong)
-- quoted_text (pôvodný text z recenzie)
-- added_date
-- verified_date (kedy bolo zistenie overené)
-```
+## Bezpecnost
 
-### toptour_ref_photo_evidence
-Fotografie a vizuálne pozorovania.
-```sql
-- id
-- facility_id / destination_id / offer_id
-- source_id (z ktorého zdroja)
-- photo_url
-- photo_type (photo, screenshot, comparison)
-- comparison_category (advertised_vs_reality)
-- description
-- added_date
-```
+- Pristup je riadeny capability modelom WordPress.
+- Admin rozhranie je interne, bez verejneho publikovania internych pracovnych dat.
+- Integracne volania a automatizacie podliehaju internemu schvaleniu.
 
-### toptour_ref_collection_tasks
-Úlohy zberu referencií.
-```sql
-- id
-- target_type (facility, destination, offer)
-- target_id
-- task_description
-- priority
-- status (open, in_progress, completed, archived)
-- assigned_to_user_id
-- deadline
-- created_date
-- completed_date
-```
+## Integracny ramec
 
-### toptour_ref_signal_patterns
-Opakujúce sa signály (3+ výskytov).
-```sql
-- id
-- finding_type
-- area
-- facility_id / destination_id
-- occurrence_count
-- pattern_strength
-- first_detected_date
-- last_detected_date
-```
-
-## Admin rozhranie
-
-Admin menu je po aktivácii dostupný na:
-- `wp-admin/admin.php?page=toptour-references`
-
-Submenu:
-- Dashboard
-- Zariadenia
-- Destinácie
-- Ponuky
-- Referenčné zdroje
-- Zistenia
-- Fotodôkazy
-- Zber referencií
-- Nastavenia
-
-Sekcie sú určené pre interný zber, evidenciu a discovery workflow bez verejného výstupu.
-
-## Bezpečnosť a oprávnenia
-
-Capability: `manage_toptour_references`
-- Automaticky priradená administrátorom pri aktivácii
-- Budúce granulárne oprávnenia pre ďalšie role
-
-Všetky výstupy sú escapnuté:
-- HTML: `esc_html()`
-- URL: `esc_url()`
-- Atribúty: `esc_attr()`
-
-Budúce endpointy:
-- Nonce validácia
-- Capability check
-- Rate limiting
-
-## REST API politika
-
-TOPTOUR Reference Finder bude v budúcnosti poskytovať dáta pre internú PWA cez WordPress REST API namespace `toptour-ref/v1`.
-
-### Plánované endpointy
-
-1. **GET /toptour-ref/v1/status** - Health check
-2. **GET /toptour-ref/v1/facilities** - Zoznam zariadení
-3. **GET /toptour-ref/v1/facilities/{id}** - Detail zariadenia
-4. **GET /toptour-ref/v1/destinations** - Zoznam destinácií
-5. **GET /toptour-ref/v1/destinations/{id}** - Detail destinácie
-6. **GET /toptour-ref/v1/offers** - Zoznam ponúk
-7. **GET /toptour-ref/v1/offers/{id}** - Detail ponuky
-8. **GET /toptour-ref/v1/sources** - Zoznam zdrojov
-9. **GET /toptour-ref/v1/findings** - Zoznam zistení
-10. **GET /toptour-ref/v1/findings/{id}** - Detail zistenia
-11. **GET /toptour-ref/v1/photo-evidence** - Zoznam fotodôkazov
-12. **GET /toptour-ref/v1/collection-tasks** - Pracovný dashboard
-13. **POST /toptour-ref/v1/collection-tasks** - Vytvorenie úlohy
-14. **POST /toptour-ref/v1/findings** - Manuálne zistenie
-15. **POST /toptour-ref/v1/photo-evidence** - Upload fotodôkazu
-
-Všetky endpointy budú:
-- Chránené capability check
-- Validované nonce
-- Rate limited
-- Bez verejného prístupu
-
-### PWA integrácia
-
-Budúca interná PWA aplikácia bude komunikovať s REST API:
-- Bez Service Worker (cache layer je zakázaný!)
-- Explicitný fetch z frontend aplikácie
-- Jasné error handling stavy
-- Fallback stany pre API nedostupnosť
-
-## Integrácje (Budúcnos)
-
-### TOPTOUR Core
-Reference Finder bude poskytovať dáta pre:
-- Detaily ponúk
-- Profily zariadení
-- Filtrovanie ponúk podľa kvality zdrojov
-
-### Fireflies / Swiss Halley
-Import ponúk z partnerov a ich automatické zbieranie referencií v budúcnosti.
-
-### Booking / TripAdvisor
-Šcraping recenzií a fotiek (budúcnos, bez API kľúčov).
-
-## Kódovací štandard
-
-- **Prefixed class names:** `Toptour_Ref_*` (nie PHP namespaces)
-- **Database prefix:** `toptour_ref_`
-- **Translation domain:** `toptour-reference-finder`
-- **PHP minimum:** 7.4
-- **WordPress minimum:** 5.0
-
-## Licencia
-
-GPL v2 alebo novšia
-
-## Poznámky
-
-1. **Bez Service Worker:** Plugin sa výslovne nepoužíva service worker ako bezpečnostnú či cacheovaciu vrstvu (zlé skúsenosti z minulosti).
-
-2. **Bez vylepšovania:** Plugin nepridáva "pekný marketing jazyk" - len zbiera raw dáta z reality.
-
-3. **Nezávislý:** Plugin je úplne nezávislý na TOPTOUR Core, má vlastný admin, dáta a vývoj.
-
-4. **Audit trail:** Všetky zistenia budú viazané na zdroj a dôkaz - kto to zistil, odkiaľ a kedy.
-
-5. **Iteratívny vývoj:** Budúce fázy budú rozširovať schopnosti bez zmeny základného princípu - **najprv reality, potom kritériá**.
+Reference Finder moze byt integrovany s dalsimi internymi systemami cez schvalene API alebo workflow mosty.
+Klucove pravidlo je zachovanie auditovatelnosti, datovej integrity a legalneho rezimu prace s verejne dostupnymi informaciami.

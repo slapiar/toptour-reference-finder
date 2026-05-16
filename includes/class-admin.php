@@ -246,10 +246,10 @@ class Toptour_Ref_Admin {
 	 * @return void
 	 */
 	public static function render_offers_page() {
-		self::render_placeholder_page(
-			esc_html__( 'Ponuky', 'toptour-reference-finder' ),
-			esc_html__( 'Ponuky a dealy, ku ktorým zbierame dôkazy z recenzií a fotiek hostí.', 'toptour-reference-finder' )
-		);
+		if ( ! Toptour_Ref_Capabilities::user_can_manage_references() ) {
+			wp_die( esc_html__( 'You do not have permission to access this page.', 'toptour-reference-finder' ) );
+		}
+		include TOPTOUR_REF_PLUGIN_DIR . 'admin/views/offers.php';
 	}
 
 	/**

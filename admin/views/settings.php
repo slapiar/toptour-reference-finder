@@ -29,6 +29,7 @@ $tables = [
 	'toptour_ref_contact_relationships',
 	'toptour_ref_contact_influence',
 	'toptour_ref_points_of_interest',
+	'toptour_ref_offers',
 	'toptour_ref_sources',
 	'toptour_ref_mail_templates',
 	'toptour_ref_mail_queue',
