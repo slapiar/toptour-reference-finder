@@ -984,6 +984,31 @@ if ( $is_task_detail ) {
 	<?php if ( 'add' === $action || 'edit' === $action ) : ?>
 		<?php
 		$f = $edit_task;
+		if ( $action === 'send_to_ai' && $edit_id ) {
+			if ( ! isset( $_GET['_wpnonce'] ) || ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_GET['_wpnonce'] ) ), 'toptour_send_to_ai_' . $edit_id ) ) {
+				wp_die( esc_html__( 'Security check failed.', 'toptour-reference-finder' ) );
+			}
+
+			$ai_result = Toptour_Ref_AI_Bridge::generate_inbox_batch( $edit_id );
+			if ( $ai_result['ok'] ) {
+				$notice      = sprintf(
+					/* translators: %s: filename */
+					__( 'Batch odoslaný do AI inbox: %s', 'toptour-reference-finder' ),
+					esc_html( $ai_result['filename'] ?? '' )
+				);
+				$notice_type = 'success';
+			} else {
+				$notice      = sprintf(
+					/* translators: %s: error message */
+					__( 'Odoslanie do AI zlyhalo: %s', 'toptour-reference-finder' ),
+					esc_html( $ai_result['message'] ?? '' )
+				);
+				$notice_type = 'error';
+			}
+			$action  = '';
+			$edit_id = 0;
+		}
+
 		if ( $_SERVER['REQUEST_METHOD'] === 'POST' && isset( $_POST['toptour_ct_submit'] ) ) {
 			$f = (object) Toptour_Ref_Collection_Tasks::sanitize_task_data( wp_unslash( $_POST ) );
 		}
@@ -1674,6 +1699,7 @@ if ( $is_task_detail ) {
 					<th><?php esc_html_e( 'Čaká na kontrolu', 'toptour-reference-finder' ); ?></th>
 					<th><?php esc_html_e( 'Chyby', 'toptour-reference-finder' ); ?></th>
 					<th><?php esc_html_e( 'Akcie', 'toptour-reference-finder' ); ?></th>
+					<th><?php esc_html_e( 'AI', 'toptour-reference-finder' ); ?></th>
 				</tr>
 			</thead>
 			<tbody>
@@ -1684,6 +1710,7 @@ if ( $is_task_detail ) {
 					$last_task_run = Toptour_Ref_Task_Runs::get_latest_run_for_task( (int) $task->id );
 					$edit_url = add_query_arg( [ 'toptour_action' => 'edit', 'task_id' => $task->id ], $base_url );
 					$archive_url = wp_nonce_url( add_query_arg( [ 'toptour_action' => 'archive', 'task_id' => $task->id ], $base_url ), 'toptour_archive_task_' . $task->id );
+										$send_ai_url = wp_nonce_url( add_query_arg( [ 'toptour_action' => 'send_to_ai', 'task_id' => $task->id ], $base_url ), 'toptour_send_to_ai_' . $task->id );
 					?>
 					<tr>
 						<td><?php echo esc_html( (int) $task->id ); ?></td>
@@ -1703,10 +1730,17 @@ if ( $is_task_detail ) {
 								<a href="<?php echo esc_url( $archive_url ); ?>" onclick="return confirm('<?php esc_attr_e( 'Archivovať túto úlohu?', 'toptour-reference-finder' ); ?>')"><?php esc_html_e( 'Archivovať', 'toptour-reference-finder' ); ?></a>
 							<?php endif; ?>
 						</td>
+						<td>
+							<?php if ( 'archived' !== $task->task_status ) : ?>
+								<a href="<?php echo esc_url( $send_ai_url ); ?>" onclick="return confirm('<?php esc_attr_e( 'Odoslať úlohu do AI inbox?', 'toptour-reference-finder' ); ?>')"><?php esc_html_e( 'Odoslať do AI', 'toptour-reference-finder' ); ?></a>
+							<?php else : ?>
+								—
+							<?php endif; ?>
+						</td>
 					</tr>
 				<?php endforeach; ?>
 			<?php else : ?>
-				<tr><td colspan="11"><?php esc_html_e( 'Žiadne záznamy.', 'toptour-reference-finder' ); ?></td></tr>
+				<tr><td colspan="12"><?php esc_html_e( 'Žiadne záznamy.', 'toptour-reference-finder' ); ?></td></tr>
 			<?php endif; ?>
 			</tbody>
 		</table>

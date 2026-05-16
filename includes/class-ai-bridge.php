@@ -140,6 +140,71 @@ class Toptour_Ref_AI_Bridge {
 		];
 	}
 
+	/**
+	 * Generate an inbox batch JSON file from an existing Collection Task.
+	 *
+	 * Reads task data and writes a ready-to-process inbox file into inbox_dir.
+	 *
+	 * @param int $task_id
+	 * @return array { ok: bool, message: string, filename?: string }
+	 */
+	public static function generate_inbox_batch( $task_id ) {
+		$task_id = absint( $task_id );
+		if ( ! $task_id ) {
+			return [ 'ok' => false, 'message' => 'Neplatné task_id.' ];
+		}
+
+		$task = Toptour_Ref_Collection_Tasks::get_task( $task_id );
+		if ( ! $task ) {
+			return [ 'ok' => false, 'message' => 'Úloha s ID ' . $task_id . ' neexistuje.' ];
+		}
+
+		$paths = self::get_paths();
+		self::ensure_directories();
+
+		$batch_id = 'task-' . $task_id . '-' . gmdate( 'YmdHis' );
+
+		$question = ! empty( $task->query_text )
+			? sanitize_textarea_field( (string) $task->query_text )
+			: sanitize_text_field( (string) $task->task_title );
+
+		$context_parts = [];
+		if ( ! empty( $task->task_title ) ) {
+			$context_parts[] = 'Úloha: ' . sanitize_text_field( (string) $task->task_title );
+		}
+		if ( ! empty( $task->target_type ) && 'general' !== $task->target_type ) {
+			$context_parts[] = 'Cieľ: ' . sanitize_text_field( (string) $task->target_type ) . ( ! empty( $task->target_id ) ? ' #' . absint( $task->target_id ) : '' );
+		}
+		if ( ! empty( $task->source_hint ) ) {
+			$context_parts[] = 'Zdroje: ' . sanitize_textarea_field( (string) $task->source_hint );
+		}
+
+		$payload = [
+			'version'     => '1.0',
+			'batch_id'    => $batch_id,
+			'task_id'     => $task_id,
+			'question'    => $question,
+			'context'     => implode( "\n", $context_parts ),
+			'constraints' => '',
+		];
+
+		$filename = $batch_id . '.json';
+		$filepath = trailingslashit( $paths['inbox_dir'] ) . $filename;
+
+		$encoded = wp_json_encode( $payload, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE );
+		if ( false === $encoded ) {
+			return [ 'ok' => false, 'message' => 'Chyba serializácie JSON.' ];
+		}
+
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents
+		$written = file_put_contents( $filepath, $encoded );
+		if ( false === $written ) {
+			return [ 'ok' => false, 'message' => 'Súbor sa nepodarilo zapísať do inbox_dir.' ];
+		}
+
+		return [ 'ok' => true, 'message' => 'Batch vygenerovaný.', 'filename' => $filename ];
+	}
+
 	public static function process_pending_batches( $limit = null ) {
 		$lock_token = self::acquire_lock();
 		if ( '' === $lock_token ) {
