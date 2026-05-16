@@ -1,5 +1,48 @@
 # DECISIONS: TOPTOUR Reference Finder
 
+## Decision: AI batch idempotency a concurrency guardrails
+
+**Status:** Schvalene
+**Date:** 2026-05-16
+
+AI workflow ma pouzivat viacvrstvovu ochranu proti pretekom a duplicitnemu importu:
+
+- file claim cez premenovanie na `*.processing` pre inbox aj outbox,
+- worker lock pre bridge/importer,
+- idempotency registry nad `batch_id` s one-time import pravidlom,
+- dedupe findings/photo candidates pri importe.
+
+Ak je `batch_id` uz oznaceny ako spracovany, importer batch znovu neimportuje.
+Review-safe stavy zostavaju povinne.
+
+## Decision: Dedikovany AI outbox importer pre mapovanie do modulov
+
+**Status:** Schvalene
+**Date:** 2026-05-16
+
+Outbox JSON z AI bridge sa importuje cez samostatny importer, nie priamo v OpenAI bridge vrstve.
+Importer mapuje data do existujucich CRUD modulov pluginu:
+
+- Reference Sources,
+- Facilities,
+- Findings,
+- Photo Evidence.
+
+Import musi prebiehat v review-safe rezime bez finalnych verdiktov:
+
+- findings sa ukladaju ako `pending_review`,
+- photo evidence sa uklada ako `verification_status=new`,
+- source suggestion workflow ostava na `manager_review`.
+
+Importer je napojeny na existujuci scheduler hook a je spustitelny aj manualne zo Settings AI process akcie.
+
+## Decision: AI bridge runs as file inbox/outbox, not direct DB writer
+
+**Status:** Schvalene
+**Date:** 2026-05-16
+
+OpenAI integration is implemented as a file-based bridge. The module reads batch JSON from inbox, asks OpenAI, and writes structured JSON to outbox for a separate importer. The AI module does not directly write domain records into plugin database tables.
+
 ## Decision: Facility task with zero target id can be discovery
 
 **Status:** Schvalene

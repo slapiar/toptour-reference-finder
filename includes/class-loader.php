@@ -43,6 +43,9 @@ class Toptour_Ref_Loader {
 		require_once TOPTOUR_REF_PLUGIN_DIR . 'includes/class-task-events.php';
 		require_once TOPTOUR_REF_PLUGIN_DIR . 'includes/class-offer-snapshots.php';
 		require_once TOPTOUR_REF_PLUGIN_DIR . 'includes/class-search-provider.php';
+		require_once TOPTOUR_REF_PLUGIN_DIR . 'includes/class-ai-bridge.php';
+		require_once TOPTOUR_REF_PLUGIN_DIR . 'includes/class-ai-batch-registry.php';
+		require_once TOPTOUR_REF_PLUGIN_DIR . 'includes/class-ai-outbox-importer.php';
 		require_once TOPTOUR_REF_PLUGIN_DIR . 'includes/class-task-processor.php';
 		require_once TOPTOUR_REF_PLUGIN_DIR . 'includes/class-data-intake-router.php';
 		require_once TOPTOUR_REF_PLUGIN_DIR . 'includes/class-facilities.php';
@@ -91,5 +94,7 @@ class Toptour_Ref_Loader {
 
 		// Scheduler hook for controlled automatic processing.
 		add_action( 'toptour_ref_process_collection_tasks', array( 'Toptour_Ref_Task_Processor', 'process_scheduled_tasks' ) );
+		add_action( 'toptour_ref_process_collection_tasks', array( 'Toptour_Ref_AI_Bridge', 'process_pending_batches' ) );
+		add_action( 'toptour_ref_process_collection_tasks', array( 'Toptour_Ref_AI_Outbox_Importer', 'process_pending_outbox' ) );
 	}
 }

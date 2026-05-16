@@ -1,5 +1,33 @@
 
+## 0.2.13
+- Pridané file-claim spracovanie pre AI inbox/outbox (`.processing`) na zamedzenie súbežného spracovania rovnakého súboru.
+- Pridaný bezpečný rollback claimu pre inbox pri zlyhaní zápisu outbox súboru.
+- Pridaný globálny lock pre AI bridge worker aj AI outbox importer worker.
+- Pridaná idempotency registry tabuľka `toptour_ref_ai_batch_registry` s unikátnym `batch_id`.
+- Importér teraz enforce-uje one-time import per `batch_id` (stavy `pending`/`processed`/`failed`).
+- Pridaná deduplikácia findings cez deterministický hash (bez časovej zložky).
+- Pridaná deduplikácia photo evidence kandidátov podľa task/source/evidence URL.
+- Plugin version navýšená na `0.2.13`, DB schema version na `0.2.4`.
+
+## 0.2.12
+- Pridaný dedikovaný `AI Outbox Importer` modul, ktorý mapuje outbox JSON do existujúcich plugin modulov (Reference Sources, Facilities, Findings, Photo Evidence).
+- Import prebieha cez existujúce `sanitize_*`, `validate_*`, `create_*`/`update_*` API tried, bez obchádzania interných pravidiel.
+- Zachovaný review-safe režim importu: findings sú ukladané so `status=pending_review`, photo evidence s `verification_status=new`, source suggestion ide na `manager_review`.
+- Importér je napojený na plánovaný scheduler hook `toptour_ref_process_collection_tasks` za AI batch spracovanie.
+- V Settings manuálnom AI procese sa po spracovaní inbox dávok spúšťa aj outbox import.
+- Pridané detailné AI import reporty v Settings (task/run, outbox súbor, metriky, rozpis podľa modulov).
+- Pridané hromadné čistenie reportov: vymazať všetko alebo iba staršie reporty podľa počtu dní.
+- Report história má automatický cap (predvolene 500 záznamov), aby systém ostal stabilný aj pri veľkom objeme.
+- Pridané hromadné čistenie AI filesystem adresárov (`inbox`, `outbox`, `archive`, `error`) v Settings.
+- Podporované režimy čistenia: iba staršie súbory podľa dní alebo úplné vymazanie scope (vrátane `all`).
+- V Settings sa zobrazuje aktuálny počet súborov v každom AI adresári pre bezpečnejšie rozhodovanie pred čistením.
+- Pridaný dry-run náhľad čistenia súborov (bez fyzického mazania), ktorý ukáže koľko súborov by bolo odstránených podľa scope a veku.
+
 ## 0.2.10
+- Pridaný AI JSON bridge modul pre OpenAI API: súborový workflow inbox/outbox bez priameho DB importu.
+- Pridané nastavenia AI bridge v administrácii (model, API key, max tokens, temperature, batch limit).
+- Pridané manuálne tlačidlo na spracovanie AI inbox dávok a automatické napojenie na plánovaný scheduler hook.
+- Výstup AI je štruktúrovaný JSON vhodný pre následný importér (sources/facilities/findings/photo evidence candidates + follow-up otázka).
 - Zobrazené ID collection task v zozname úloh aj v detaile/editácii.
 - Doplnený discovery režim pre facility tasky bez target ID, ak zadanie poskytuje kontext destinácie alebo signálu.
 - Pridaná generácia query seeds pre testovaciu úlohu Negatíva zo Sardínie.

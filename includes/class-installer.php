@@ -782,6 +782,26 @@ class Toptour_Ref_Installer {
 		KEY related_collection_task_id (related_collection_task_id)
 	) {$charset_collate};";
 
+		$tables[] = "CREATE TABLE {$wpdb->prefix}toptour_ref_ai_batch_registry (
+		id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+		batch_id varchar(191) NOT NULL,
+		task_id bigint(20) unsigned DEFAULT 0,
+		outbox_file varchar(255) DEFAULT '',
+		status varchar(50) DEFAULT 'pending',
+		claimed_by varchar(120) DEFAULT '',
+		claimed_at datetime NULL,
+		processed_at datetime NULL,
+		last_error text NULL,
+		created_at datetime NOT NULL,
+		updated_at datetime NOT NULL,
+		PRIMARY KEY  (id),
+		UNIQUE KEY batch_id (batch_id),
+		KEY task_id (task_id),
+		KEY status (status),
+		KEY claimed_at (claimed_at),
+		KEY processed_at (processed_at)
+	) {$charset_collate};";
+
 		foreach ( $tables as $sql ) {
 			dbDelta( $sql );
 		}
