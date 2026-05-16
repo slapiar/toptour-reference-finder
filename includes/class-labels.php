@@ -381,12 +381,62 @@ class Toptour_Ref_Labels {
 				'other' => 'Iné',
 			],
 			'task_status' => [
+				'draft' => 'Koncept',
+				'active' => 'Aktívna',
+				'paused' => 'Pozastavená',
 				'pending' => 'Čaká',
 				'in_progress' => 'Prebieha',
 				'done' => 'Hotovo',
 				'failed' => 'Zlyhalo',
 				'needs_review' => 'Vyžaduje kontrolu',
 				'archived' => 'Archivované',
+			],
+			'collection_frequency' => [
+				'manual' => 'Manuálne',
+				'daily' => 'Denne',
+				'twice_daily' => '2x denne',
+				'three_times_daily' => '3x denne',
+				'six_daily' => '6x denne',
+				'custom' => 'Vlastné',
+			],
+			'finding_lifecycle_status' => [
+				'new' => 'Nové',
+				'pending_review' => 'Čaká na kontrolu',
+				'accepted' => 'Prijaté',
+				'rejected' => 'Odmietnuté',
+				'duplicate' => 'Duplicitné',
+				'needs_verification' => 'Vyžaduje overenie',
+			],
+			'task_run_status' => [
+				'running' => 'Prebieha',
+				'finished' => 'Dokončené',
+				'failed' => 'Zlyhalo',
+				'skipped' => 'Preskočené',
+			],
+			'task_event_type' => [
+				'created' => 'Vytvorené',
+				'updated' => 'Upravené',
+				'enabled' => 'Zapnuté',
+				'disabled' => 'Vypnuté',
+				'frequency_changed' => 'Zmena frekvencie',
+				'query_changed' => 'Zmena zadania',
+				'run_started' => 'Beh spustený',
+				'run_finished' => 'Beh dokončený',
+				'run_skipped' => 'Beh preskočený',
+				'finding_added' => 'Nález pridaný',
+				'finding_accepted' => 'Nález prijatý',
+				'finding_rejected' => 'Nález odmietnutý',
+				'poi_suggested' => 'POI navrhnuté',
+				'poi_accepted' => 'POI prijaté',
+				'reference_analysis_created' => 'Analýza referencie vytvorená',
+				'reference_analysis_updated' => 'Analýza referencie upravená',
+				'offer_snapshot_created' => 'Snapshot ponuky vytvorený',
+				'offer_snapshot_updated' => 'Snapshot ponuky upravený',
+				'poi_candidate_suggested' => 'POI kandidát navrhnutý',
+				'poi_candidate_accepted' => 'POI kandidát prijatý',
+				'poi_candidate_rejected' => 'POI kandidát odmietnutý',
+				'error' => 'Chyba',
+				'manual_note_added' => 'Poznámka pridaná',
 			],
 			'priority' => [
 				'low' => 'Nízka',
@@ -507,6 +557,10 @@ class Toptour_Ref_Labels {
 	public static function facility_type_label( $value ) { return self::get_label( 'facility_type', $value ); }
 	public static function destination_type_label( $value ) { return self::get_label( 'destination_type', $value ); }
 	public static function task_status_label( $value ) { return self::get_label( 'task_status', $value ); }
+	public static function collection_frequency_label( $value ) { return self::get_label( 'collection_frequency', $value ); }
+	public static function finding_lifecycle_status_label( $value ) { return self::get_label( 'finding_lifecycle_status', $value ); }
+	public static function task_run_status_label( $value ) { return self::get_label( 'task_run_status', $value ); }
+	public static function task_event_type_label( $value ) { return self::get_label( 'task_event_type', $value ); }
 	public static function priority_label( $value ) { return self::get_label( 'priority', $value ); }
 	public static function expected_source_type_label( $value ) { return self::get_label( 'expected_source_type', $value ); }
 	public static function discovery_run_status_label( $value ) { return self::get_label( 'discovery_run_status', $value ); }

@@ -47,13 +47,18 @@ $action      = isset( $_GET['toptour_action'] ) ? sanitize_text_field( wp_unslas
 $edit_id     = isset( $_GET['task_id'] ) ? absint( $_GET['task_id'] ) : 0;
 $notice      = '';
 $notice_type = 'success';
+$finder_mode = Toptour_Ref_Task_Processor::get_mode();
 
 if ( $action === 'archive' && $edit_id ) {
+	$task_before_archive = Toptour_Ref_Collection_Tasks::get_task( $edit_id );
 	if ( ! isset( $_GET['_wpnonce'] ) || ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_GET['_wpnonce'] ) ), 'toptour_archive_task_' . $edit_id ) ) {
 		wp_die( esc_html__( 'Security check failed.', 'toptour-reference-finder' ) );
 	}
 
 	$archived = Toptour_Ref_Collection_Tasks::archive_task( $edit_id );
+	if ( $archived && $task_before_archive ) {
+		Toptour_Ref_Task_Events::log_event( $edit_id, 'disabled', $task_before_archive->task_status, 'archived', 'Task archived from list action.' );
+	}
 	$notice = $archived
 		? __( 'Uloha bola archivovana.', 'toptour-reference-finder' )
 		: __( 'Archivacia zlyhala.', 'toptour-reference-finder' );
@@ -68,6 +73,7 @@ if ( $_SERVER['REQUEST_METHOD'] === 'POST' && isset( $_POST['toptour_ct_submit']
 	}
 
 	$post_id = absint( $_POST['task_id'] ?? 0 );
+	$previous_task = $post_id ? Toptour_Ref_Collection_Tasks::get_task( $post_id ) : null;
 	$data = Toptour_Ref_Collection_Tasks::sanitize_task_data( wp_unslash( $_POST ) );
 	$valid = Toptour_Ref_Collection_Tasks::validate_task_data( $data );
 
@@ -77,6 +83,20 @@ if ( $_SERVER['REQUEST_METHOD'] === 'POST' && isset( $_POST['toptour_ct_submit']
 			? __( 'Uloha bola ulozena.', 'toptour-reference-finder' )
 			: __( 'Ulozenie ulohy zlyhalo.', 'toptour-reference-finder' );
 		$notice_type = $ok ? 'success' : 'error';
+		if ( $ok ) {
+			$event_task_id = $post_id > 0 ? $post_id : (int) $ok;
+			if ( $post_id > 0 ) {
+				Toptour_Ref_Task_Events::log_event( $event_task_id, 'updated', $previous_task, $data, 'Task updated from admin form.' );
+				if ( $previous_task && (string) $previous_task->frequency !== (string) $data['frequency'] ) {
+					Toptour_Ref_Task_Events::log_event( $event_task_id, 'frequency_changed', $previous_task->frequency, $data['frequency'], 'Collection frequency changed.' );
+				}
+				if ( $previous_task && (string) $previous_task->query_text !== (string) $data['query_text'] ) {
+					Toptour_Ref_Task_Events::log_event( $event_task_id, 'query_changed', $previous_task->query_text, $data['query_text'], 'Task query text changed.' );
+				}
+			} else {
+				Toptour_Ref_Task_Events::log_event( $event_task_id, 'created', null, $data, 'Task created from admin form.' );
+			}
+		}
 		if ( $ok ) {
 			$action = $post_id ? 'edit' : '';
 			$edit_id = $post_id ? $post_id : 0;
@@ -101,14 +121,17 @@ if ( $_SERVER['REQUEST_METHOD'] === 'POST' && isset( $_POST['toptour_ct_finder_s
 	if ( 'analyze_task' === $finder_action && $task_id > 0 ) {
 		$task = Toptour_Ref_Collection_Tasks::get_task( $task_id );
 		if ( $task ) {
+			Toptour_Ref_Task_Events::log_event( $task_id, 'run_started', null, null, 'Discovery analysis started.' );
 			$analysis = Toptour_Ref_Collection_Task_Resolver::analyze_task( $task );
 			$new_run_id = Toptour_Ref_Collection_Task_Resolver::create_discovery_run( $task_id, $analysis );
 			if ( $new_run_id ) {
 				Toptour_Ref_Collection_Tasks::touch_task_run( $task_id, 'in_progress' );
+				Toptour_Ref_Task_Events::log_event( $task_id, 'run_finished', null, [ 'discovery_run_id' => (int) $new_run_id ], 'Discovery analysis run stored.' );
 				$notice = __( 'Analyza zadania bola vytvorena a discovery run ulozeny.', 'toptour-reference-finder' );
 				$notice_type = 'success';
 				$run_id = $new_run_id;
 			} else {
+				Toptour_Ref_Task_Events::log_event( $task_id, 'error', null, null, 'Discovery run creation failed.' );
 				$notice = __( 'Discovery run sa nepodarilo vytvorit.', 'toptour-reference-finder' );
 				$notice_type = 'error';
 			}
@@ -214,6 +237,7 @@ if ( $_SERVER['REQUEST_METHOD'] === 'POST' && isset( $_POST['toptour_ct_finder_s
 
 	if ( 'run_discovery' === $finder_action && $run_id > 0 ) {
 		$run = Toptour_Ref_Discovery_Runs::get_run( $run_id );
+		$task_run_id = false;
 		$provider = sanitize_text_field( wp_unslash( $_POST['discovery_provider'] ?? ( $run ? $run->discovery_provider : 'manual' ) ) );
 		if ( ! in_array( $provider, Toptour_Ref_Discovery_Runs::get_allowed_providers(), true ) ) {
 			$provider = 'manual';
@@ -230,8 +254,24 @@ if ( $_SERVER['REQUEST_METHOD'] === 'POST' && isset( $_POST['toptour_ct_finder_s
 		);
 
 		if ( 'search_api' === $provider ) {
+			$task_run_id = Toptour_Ref_Task_Runs::create_run(
+				$task_id,
+				[
+					'status' => 'running',
+					'started_at' => current_time( 'mysql' ),
+					'summary' => 'Search API discovery run started.',
+				]
+			);
 			$result = Toptour_Ref_Discovery_Provider::run_search_api_discovery( $run_id );
 		} elseif ( 'manual' === $provider ) {
+			$task_run_id = Toptour_Ref_Task_Runs::create_run(
+				$task_id,
+				[
+					'status' => 'running',
+					'started_at' => current_time( 'mysql' ),
+					'summary' => 'Manual discovery run started.',
+				]
+			);
 			$result = Toptour_Ref_Discovery_Provider::run_manual_discovery( $run_id );
 		} else {
 			Toptour_Ref_Discovery_Runs::update_run_status( $run_id, 'needs_input' );
@@ -243,9 +283,48 @@ if ( $_SERVER['REQUEST_METHOD'] === 'POST' && isset( $_POST['toptour_ct_finder_s
 
 		$notice = sanitize_text_field( $result['message'] ?? __( 'Discovery akcia ukoncena.', 'toptour-reference-finder' ) );
 		$notice_type = ! empty( $result['success'] ) ? 'success' : 'error';
+		if ( $task_run_id ) {
+			$status = ! empty( $result['success'] ) ? 'finished' : 'failed';
+			$run_candidates = Toptour_Ref_Discovery_Candidates::get_candidates_for_run( $run_id );
+			$found_count = is_array( $run_candidates ) ? count( $run_candidates ) : 0;
+			$new_count = 0;
+			$duplicate_count = 0;
+			if ( is_array( $run_candidates ) ) {
+				foreach ( $run_candidates as $run_candidate ) {
+					if ( 'duplicate' === $run_candidate->candidate_status ) {
+						$duplicate_count++;
+					}
+					if ( in_array( $run_candidate->candidate_status, [ 'new', 'needs_review' ], true ) ) {
+						$new_count++;
+					}
+				}
+			}
+			Toptour_Ref_Task_Runs::update_run(
+				$task_run_id,
+				[
+					'status' => $status,
+					'finished_at' => current_time( 'mysql' ),
+					'found_count' => $found_count,
+					'new_count' => $new_count,
+					'duplicate_count' => $duplicate_count,
+					'error_count' => ! empty( $result['success'] ) ? 0 : 1,
+					'summary' => sanitize_text_field( $result['message'] ?? '' ),
+				]
+			);
+			Toptour_Ref_Task_Events::log_event( $task_id, 'run_finished', null, [ 'task_run_id' => (int) $task_run_id, 'status' => $status ], sanitize_text_field( $result['message'] ?? '' ) );
+		}
+		if ( empty( $result['success'] ) ) {
+			Toptour_Ref_Task_Events::log_event( $task_id, 'error', null, null, sanitize_text_field( $result['message'] ?? 'Discovery action failed.' ) );
+		}
 		if ( $task_id > 0 ) {
 			Toptour_Ref_Collection_Tasks::touch_task_run( $task_id, 'in_progress' );
 		}
+	}
+
+	if ( 'run_test' === $finder_action && $task_id > 0 ) {
+		$result = Toptour_Ref_Task_Processor::process_task( $task_id, 'manual' );
+		$notice = sanitize_text_field( $result['message'] ?? __( 'Testovaci beh bol vykonany.', 'toptour-reference-finder' ) );
+		$notice_type = ! empty( $result['success'] ) ? 'success' : 'error';
 	}
 
 	if ( 'create_candidate' === $finder_action && $run_id > 0 && $task_id > 0 ) {
@@ -269,6 +348,9 @@ if ( $_SERVER['REQUEST_METHOD'] === 'POST' && isset( $_POST['toptour_ct_finder_s
 		];
 
 		$created = Toptour_Ref_Discovery_Candidates::create_candidate( $candidate_data );
+		if ( $created ) {
+			Toptour_Ref_Task_Events::log_event( $task_id, 'manual_note_added', null, [ 'candidate_id' => (int) $created ], 'Discovery candidate added.' );
+		}
 		$notice = $created
 			? __( 'Discovery kandidat bol pridany.', 'toptour-reference-finder' )
 			: __( 'Kandidata sa nepodarilo ulozit.', 'toptour-reference-finder' );
@@ -282,6 +364,7 @@ if ( $_SERVER['REQUEST_METHOD'] === 'POST' && isset( $_POST['toptour_ct_finder_s
 		if ( 'accept' === $decision ) {
 			$source_id = Toptour_Ref_Discovery_Candidates::accept_candidate_as_source( $candidate_id );
 			if ( $source_id ) {
+				Toptour_Ref_Task_Events::log_event( $task_id, 'finding_accepted', null, [ 'candidate_id' => $candidate_id, 'source_id' => (int) $source_id ], 'Candidate accepted as source.' );
 				$notice = sprintf( __( 'Kandidat prijaty ako Reference Source #%d.', 'toptour-reference-finder' ), (int) $source_id );
 				$notice_type = 'success';
 			} else {
@@ -292,12 +375,18 @@ if ( $_SERVER['REQUEST_METHOD'] === 'POST' && isset( $_POST['toptour_ct_finder_s
 
 		if ( 'reject' === $decision ) {
 			$ok = Toptour_Ref_Discovery_Candidates::reject_candidate( $candidate_id );
+			if ( $ok ) {
+				Toptour_Ref_Task_Events::log_event( $task_id, 'finding_rejected', null, [ 'candidate_id' => $candidate_id ], 'Candidate rejected.' );
+			}
 			$notice = $ok ? __( 'Kandidat bol odmietnuty.', 'toptour-reference-finder' ) : __( 'Akcia odmietnutia zlyhala.', 'toptour-reference-finder' );
 			$notice_type = $ok ? 'success' : 'error';
 		}
 
 		if ( 'duplicate' === $decision ) {
 			$ok = Toptour_Ref_Discovery_Candidates::mark_duplicate( $candidate_id );
+			if ( $ok ) {
+				Toptour_Ref_Task_Events::log_event( $task_id, 'updated', null, [ 'candidate_id' => $candidate_id, 'status' => 'duplicate' ], 'Candidate marked as duplicate.' );
+			}
 			$notice = $ok ? __( 'Kandidat bol oznaceny ako duplicita.', 'toptour-reference-finder' ) : __( 'Akcia duplicity zlyhala.', 'toptour-reference-finder' );
 			$notice_type = $ok ? 'success' : 'error';
 		}
@@ -335,6 +424,7 @@ $total = $result['total'];
 $total_pages = (int) ceil( $total / 20 );
 
 $allowed_statuses = Toptour_Ref_Collection_Tasks::get_allowed_statuses();
+$allowed_frequencies = Toptour_Ref_Collection_Tasks::get_allowed_frequencies();
 $allowed_priorities = Toptour_Ref_Collection_Tasks::get_allowed_priorities();
 $allowed_target_types = Toptour_Ref_Collection_Tasks::get_allowed_target_types();
 $allowed_source_types = Toptour_Ref_Collection_Tasks::get_allowed_source_types();
@@ -346,8 +436,24 @@ $run_queries = [];
 $run_interest_candidates = [];
 $run_finding_areas = [];
 $candidates = [];
+$task_stats = [
+	'total_found' => 0,
+	'new_found' => 0,
+	'pending_review' => 0,
+	'poi_suggestions' => 0,
+	'error_count' => 0,
+];
+$task_recent_findings = [];
+$task_recent_snapshots = [];
+$task_events = [];
+$task_runs = [];
 
 if ( $edit_task ) {
+	$task_stats = Toptour_Ref_Collection_Tasks::get_task_stats( (int) $edit_task->id );
+	$task_recent_findings = Toptour_Ref_Collection_Tasks::get_recent_findings( (int) $edit_task->id, 10 );
+	$task_events = Toptour_Ref_Task_Events::get_events_for_task( (int) $edit_task->id, 50 );
+	$task_runs = Toptour_Ref_Task_Runs::get_runs_for_task( (int) $edit_task->id, 10 );
+	$task_recent_snapshots = Toptour_Ref_Offer_Snapshots::get_recent_for_task( (int) $edit_task->id, 10 );
 	$latest_run = Toptour_Ref_Discovery_Runs::get_latest_run_for_task( (int) $edit_task->id );
 	if ( $latest_run ) {
 		$missing_rows = Toptour_Ref_Discovery_Runs::get_missing_fields( (int) $latest_run->id );
@@ -363,6 +469,15 @@ if ( $edit_task ) {
 <div class="wrap toptour-ref-collection-tasks">
 	<h1><?php esc_html_e( 'Zber referencii', 'toptour-reference-finder' ); ?></h1>
 	<p class="description"><?php esc_html_e( 'Kontrolovany admin workflow pre discovery zdrojov. Bez automatickeho scrapingu, bez AI a bez verejneho vystupu.', 'toptour-reference-finder' ); ?></p>
+	<div class="notice notice-info inline">
+		<p>
+			<?php if ( 'manual' === $finder_mode ) : ?>
+				<?php esc_html_e( 'Automatické spúšťanie je vypnuté. Úlohy sa spúšťajú iba ručne.', 'toptour-reference-finder' ); ?>
+			<?php else : ?>
+				<?php esc_html_e( 'Automatické spúšťanie je zapnuté. Aktívne úlohy sa spracujú podľa frequency a next_run_at.', 'toptour-reference-finder' ); ?>
+			<?php endif; ?>
+		</p>
+	</div>
 
 	<?php if ( $notice ) : ?>
 		<div class="notice notice-<?php echo esc_attr( $notice_type ); ?> is-dismissible">
@@ -388,6 +503,32 @@ if ( $edit_task ) {
 				<tr>
 					<th scope="row"><label for="task_title"><?php esc_html_e( 'Nazov ulohy', 'toptour-reference-finder' ); ?> <span class="required">*</span></label></th>
 					<td><input type="text" id="task_title" name="task_title" class="regular-text" maxlength="255" required value="<?php echo esc_attr( $f->task_title ?? '' ); ?>"></td>
+				</tr>
+				<tr>
+					<th scope="row"><label for="frequency"><?php esc_html_e( 'Frekvencia', 'toptour-reference-finder' ); ?></label></th>
+					<td>
+						<select id="frequency" name="frequency">
+							<?php foreach ( $allowed_frequencies as $frequency_item ) : ?>
+								<option value="<?php echo esc_attr( $frequency_item ); ?>" <?php selected( $f->frequency ?? 'manual', $frequency_item ); ?>><?php echo esc_html( Toptour_Ref_Labels::collection_frequency_label( $frequency_item ) ); ?></option>
+							<?php endforeach; ?>
+						</select>
+					</td>
+				</tr>
+				<tr>
+					<th scope="row"><label for="next_run_at"><?php esc_html_e( 'Dalsi beh', 'toptour-reference-finder' ); ?></label></th>
+					<td><input type="datetime-local" id="next_run_at" name="next_run_at" value="<?php echo ! empty( $f->next_run_at ) ? esc_attr( gmdate( 'Y-m-d\TH:i', strtotime( $f->next_run_at ) ) ) : ''; ?>"></td>
+				</tr>
+				<tr>
+					<th scope="row"><label for="destination_id"><?php esc_html_e( 'Destinacia ID', 'toptour-reference-finder' ); ?></label></th>
+					<td><input type="number" id="destination_id" name="destination_id" min="0" value="<?php echo esc_attr( $f->destination_id ?? 0 ); ?>"></td>
+				</tr>
+				<tr>
+					<th scope="row"><label for="supplier_id"><?php esc_html_e( 'Supplier ID', 'toptour-reference-finder' ); ?></label></th>
+					<td><input type="number" id="supplier_id" name="supplier_id" min="0" value="<?php echo esc_attr( $f->supplier_id ?? 0 ); ?>"></td>
+				</tr>
+				<tr>
+					<th scope="row"><label for="offer_id"><?php esc_html_e( 'Offer ID', 'toptour-reference-finder' ); ?></label></th>
+					<td><input type="number" id="offer_id" name="offer_id" min="0" value="<?php echo esc_attr( $f->offer_id ?? 0 ); ?>"></td>
 				</tr>
 				<tr>
 					<th scope="row"><label for="target_type"><?php esc_html_e( 'Typ ciela', 'toptour-reference-finder' ); ?></label></th>
@@ -473,6 +614,13 @@ if ( $edit_task ) {
 				<input type="hidden" name="finder_action" value="analyze_task">
 				<input type="hidden" name="task_id" value="<?php echo esc_attr( $form_id ); ?>">
 				<?php submit_button( __( 'Analyzovat zadanie', 'toptour-reference-finder' ), 'secondary', '', false ); ?>
+			</form>
+			<form method="post" action="<?php echo esc_url( $base_url ); ?>" style="margin-bottom: 12px;">
+				<?php wp_nonce_field( 'toptour_collection_discovery_action' ); ?>
+				<input type="hidden" name="toptour_ct_finder_submit" value="1">
+				<input type="hidden" name="finder_action" value="run_test">
+				<input type="hidden" name="task_id" value="<?php echo esc_attr( $form_id ); ?>">
+				<?php submit_button( __( 'Spustit testovaci beh', 'toptour-reference-finder' ), 'primary', '', false ); ?>
 			</form>
 
 			<?php if ( $latest_run ) : ?>
@@ -702,6 +850,200 @@ if ( $edit_task ) {
 					</table>
 				</div>
 			<?php endif; ?>
+
+			<?php if ( $edit_task ) : ?>
+				<div style="margin-top: 24px; background: #fff; border: 1px solid #dcdcde; padding: 16px;">
+					<h2><?php esc_html_e( 'Detail ulohy (MVP)', 'toptour-reference-finder' ); ?></h2>
+					<p>
+						<strong><?php esc_html_e( 'Uloha:', 'toptour-reference-finder' ); ?></strong> <?php echo esc_html( $edit_task->task_title ); ?>
+						| <strong><?php esc_html_e( 'Stav:', 'toptour-reference-finder' ); ?></strong> <?php echo esc_html( Toptour_Ref_Labels::task_status_label( $edit_task->task_status ) ); ?>
+						| <strong><?php esc_html_e( 'Frekvencia:', 'toptour-reference-finder' ); ?></strong> <?php echo esc_html( Toptour_Ref_Labels::collection_frequency_label( $edit_task->frequency ?? 'manual' ) ); ?>
+					</p>
+					<p>
+						<strong><?php esc_html_e( 'Posledny beh:', 'toptour-reference-finder' ); ?></strong> <?php echo ! empty( $edit_task->last_run_at ) ? esc_html( $edit_task->last_run_at ) : '—'; ?>
+						| <strong><?php esc_html_e( 'Dalsi beh:', 'toptour-reference-finder' ); ?></strong> <?php echo ! empty( $edit_task->next_run_at ) ? esc_html( $edit_task->next_run_at ) : '—'; ?>
+					</p>
+
+					<h3><?php esc_html_e( 'Prehlad', 'toptour-reference-finder' ); ?></h3>
+					<ul style="list-style: disc; padding-left: 20px;">
+						<li><?php printf( esc_html__( 'Celkom najdenych vysledkov: %d', 'toptour-reference-finder' ), (int) $task_stats['total_found'] ); ?></li>
+						<li><?php printf( esc_html__( 'Novych vysledkov: %d', 'toptour-reference-finder' ), (int) $task_stats['new_found'] ); ?></li>
+						<li><?php printf( esc_html__( 'Caka na kontrolu: %d', 'toptour-reference-finder' ), (int) $task_stats['pending_review'] ); ?></li>
+						<li><?php printf( esc_html__( 'Navrhov POI: %d', 'toptour-reference-finder' ), (int) $task_stats['poi_suggestions'] ); ?></li>
+						<li><?php printf( esc_html__( 'Pocet chyb: %d', 'toptour-reference-finder' ), (int) $task_stats['error_count'] ); ?></li>
+					</ul>
+
+					<h3><?php esc_html_e( 'Nalezy', 'toptour-reference-finder' ); ?></h3>
+					<table class="wp-list-table widefat fixed striped" style="margin-bottom: 16px;">
+						<thead>
+							<tr>
+								<th><?php esc_html_e( 'Zdroj URL', 'toptour-reference-finder' ); ?></th>
+								<th><?php esc_html_e( 'Zdroj nazov', 'toptour-reference-finder' ); ?></th>
+								<th><?php esc_html_e( 'Typ zdroja', 'toptour-reference-finder' ); ?></th>
+								<th><?php esc_html_e( 'Review datum', 'toptour-reference-finder' ); ?></th>
+								<th><?php esc_html_e( 'Detekovane', 'toptour-reference-finder' ); ?></th>
+								<th><?php esc_html_e( 'Overene', 'toptour-reference-finder' ); ?></th>
+								<th><?php esc_html_e( 'Analyza', 'toptour-reference-finder' ); ?></th>
+								<th><?php esc_html_e( 'Jazyk', 'toptour-reference-finder' ); ?></th>
+								<th><?php esc_html_e( 'Typ referencie', 'toptour-reference-finder' ); ?></th>
+								<th><?php esc_html_e( 'Sentiment', 'toptour-reference-finder' ); ?></th>
+								<th><?php esc_html_e( 'Zhrnutie', 'toptour-reference-finder' ); ?></th>
+								<th><?php esc_html_e( 'Stav analyzy', 'toptour-reference-finder' ); ?></th>
+								<th><?php esc_html_e( 'Dest', 'toptour-reference-finder' ); ?></th>
+								<th><?php esc_html_e( 'Supplier', 'toptour-reference-finder' ); ?></th>
+								<th><?php esc_html_e( 'Offer', 'toptour-reference-finder' ); ?></th>
+								<th><?php esc_html_e( 'POI poznamka', 'toptour-reference-finder' ); ?></th>
+								<th><?php esc_html_e( 'Nazov', 'toptour-reference-finder' ); ?></th>
+							</tr>
+						</thead>
+						<tbody>
+							<?php if ( ! empty( $task_recent_findings ) ) : ?>
+								<?php foreach ( $task_recent_findings as $task_finding ) : ?>
+									<tr>
+										<td>
+											<?php if ( ! empty( $task_finding->source_url ) ) : ?>
+												<a href="<?php echo esc_url( $task_finding->source_url ); ?>" target="_blank" rel="noopener noreferrer"><?php esc_html_e( 'Otvorit', 'toptour-reference-finder' ); ?></a>
+											<?php else : ?>—<?php endif; ?>
+										</td>
+										<td><?php echo esc_html( $task_finding->source_title ?: '—' ); ?></td>
+										<td><?php echo esc_html( Toptour_Ref_Labels::source_type_label( $task_finding->source_type ) ); ?></td>
+										<td><?php echo esc_html( ! empty( $task_finding->review_published_at ) ? $task_finding->review_published_at : '—' ); ?></td>
+										<td><?php echo esc_html( ! empty( $task_finding->source_detected_at ) ? $task_finding->source_detected_at : '—' ); ?></td>
+										<td><?php echo esc_html( ! empty( $task_finding->source_last_checked_at ) ? $task_finding->source_last_checked_at : '—' ); ?></td>
+										<td><?php echo esc_html( ! empty( $task_finding->analysis_performed_at ) ? $task_finding->analysis_performed_at : '—' ); ?></td>
+										<td><?php echo esc_html( ! empty( $task_finding->reference_language ) ? $task_finding->reference_language : '—' ); ?></td>
+										<td><?php echo esc_html( ! empty( $task_finding->reference_type ) ? $task_finding->reference_type : '—' ); ?></td>
+										<td><?php echo esc_html( ! empty( $task_finding->detected_sentiment ) ? $task_finding->detected_sentiment : '—' ); ?></td>
+										<td><?php echo esc_html( ! empty( $task_finding->analysis_summary ) ? $task_finding->analysis_summary : '—' ); ?></td>
+										<td><?php echo esc_html( ! empty( $task_finding->analysis_status ) ? $task_finding->analysis_status : '—' ); ?></td>
+										<td><?php echo esc_html( (int) $task_finding->destination_id > 0 ? (int) $task_finding->destination_id : '—' ); ?></td>
+										<td><?php echo esc_html( (int) $task_finding->supplier_id > 0 ? (int) $task_finding->supplier_id : '—' ); ?></td>
+										<td><?php echo esc_html( (int) $task_finding->offer_id > 0 ? (int) $task_finding->offer_id : '—' ); ?></td>
+										<td><?php echo esc_html( ! empty( $task_finding->poi_extraction_note ) ? $task_finding->poi_extraction_note : '—' ); ?></td>
+										<td><?php echo esc_html( $task_finding->finding_title ); ?></td>
+									</tr>
+								<?php endforeach; ?>
+							<?php else : ?>
+								<tr><td colspan="17"><?php esc_html_e( 'Zatial bez nalezov pre tuto ulohu.', 'toptour-reference-finder' ); ?></td></tr>
+							<?php endif; ?>
+						</tbody>
+					</table>
+
+					<h3><?php esc_html_e( 'Offer snapshots', 'toptour-reference-finder' ); ?></h3>
+					<table class="wp-list-table widefat fixed striped" style="margin-bottom: 16px;">
+						<thead>
+							<tr>
+								<th><?php esc_html_e( 'Nazov ponuky', 'toptour-reference-finder' ); ?></th>
+								<th><?php esc_html_e( 'URL', 'toptour-reference-finder' ); ?></th>
+								<th><?php esc_html_e( 'Supplier', 'toptour-reference-finder' ); ?></th>
+								<th><?php esc_html_e( 'Destinacia', 'toptour-reference-finder' ); ?></th>
+								<th><?php esc_html_e( 'Cena', 'toptour-reference-finder' ); ?></th>
+								<th><?php esc_html_e( 'Mena', 'toptour-reference-finder' ); ?></th>
+								<th><?php esc_html_e( 'Poznamka k cene', 'toptour-reference-finder' ); ?></th>
+								<th><?php esc_html_e( 'Dlzka pobytu', 'toptour-reference-finder' ); ?></th>
+								<th><?php esc_html_e( 'Osoby', 'toptour-reference-finder' ); ?></th>
+								<th><?php esc_html_e( 'Sezona/platnost', 'toptour-reference-finder' ); ?></th>
+								<th><?php esc_html_e( 'Strava', 'toptour-reference-finder' ); ?></th>
+								<th><?php esc_html_e( 'Doprava', 'toptour-reference-finder' ); ?></th>
+								<th><?php esc_html_e( 'Ubytovanie', 'toptour-reference-finder' ); ?></th>
+								<th><?php esc_html_e( 'Kategoria zariadenia', 'toptour-reference-finder' ); ?></th>
+								<th><?php esc_html_e( 'Zahrnute sluzby', 'toptour-reference-finder' ); ?></th>
+								<th><?php esc_html_e( 'Nezahrnute sluzby', 'toptour-reference-finder' ); ?></th>
+								<th><?php esc_html_e( 'Podmienky', 'toptour-reference-finder' ); ?></th>
+								<th><?php esc_html_e( 'Dostupnost', 'toptour-reference-finder' ); ?></th>
+								<th><?php esc_html_e( 'Analyza', 'toptour-reference-finder' ); ?></th>
+								<th><?php esc_html_e( 'Stav', 'toptour-reference-finder' ); ?></th>
+							</tr>
+						</thead>
+						<tbody>
+							<?php if ( ! empty( $task_recent_snapshots ) ) : ?>
+								<?php foreach ( $task_recent_snapshots as $snapshot ) : ?>
+									<tr>
+										<td><?php echo esc_html( $snapshot->offer_name ?: '—' ); ?></td>
+										<td><?php if ( ! empty( $snapshot->source_url ) ) : ?><a href="<?php echo esc_url( $snapshot->source_url ); ?>" target="_blank" rel="noopener noreferrer"><?php esc_html_e( 'Otvorit', 'toptour-reference-finder' ); ?></a><?php else : ?>—<?php endif; ?></td>
+										<td><?php echo esc_html( (int) $snapshot->supplier_id > 0 ? (int) $snapshot->supplier_id : '—' ); ?></td>
+										<td><?php echo esc_html( (int) $snapshot->destination_id > 0 ? (int) $snapshot->destination_id : '—' ); ?></td>
+										<td><?php echo null !== $snapshot->price_value ? esc_html( $snapshot->price_value ) : '—'; ?></td>
+										<td><?php echo esc_html( $snapshot->price_currency ?: '—' ); ?></td>
+										<td><?php echo esc_html( $snapshot->price_note ?: '—' ); ?></td>
+										<td><?php echo esc_html( $snapshot->stay_duration ?: '—' ); ?></td>
+										<td><?php echo esc_html( (int) $snapshot->persons_min > 0 || (int) $snapshot->persons_max > 0 ? ((int) $snapshot->persons_min) . '-' . ((int) $snapshot->persons_max) : '—' ); ?></td>
+										<td><?php echo esc_html( $snapshot->season ?: '—' ); ?><?php echo esc_html( ( ! empty( $snapshot->valid_from ) || ! empty( $snapshot->valid_to ) ) ? ' (' . ( $snapshot->valid_from ?: '?' ) . ' - ' . ( $snapshot->valid_to ?: '?' ) . ')' : '' ); ?></td>
+										<td><?php echo esc_html( $snapshot->meal_plan ?: '—' ); ?></td>
+										<td><?php echo esc_html( $snapshot->transport_type ?: '—' ); ?></td>
+										<td><?php echo esc_html( $snapshot->accommodation_type ?: '—' ); ?></td>
+										<td><?php echo esc_html( $snapshot->facility_category ?: '—' ); ?></td>
+										<td><?php echo esc_html( $snapshot->included_services_summary ?: '—' ); ?></td>
+										<td><?php echo esc_html( $snapshot->excluded_services_summary ?: '—' ); ?></td>
+										<td><?php echo esc_html( $snapshot->booking_conditions_summary ?: '—' ); ?></td>
+										<td><?php echo esc_html( $snapshot->availability_note ?: '—' ); ?></td>
+										<td><?php echo esc_html( $snapshot->analysis_performed_at ?: '—' ); ?></td>
+										<td><?php echo esc_html( $snapshot->status ?: '—' ); ?></td>
+									</tr>
+								<?php endforeach; ?>
+							<?php else : ?>
+								<tr><td colspan="20"><?php esc_html_e( 'Zatial bez offer snapshotov pre tuto ulohu.', 'toptour-reference-finder' ); ?></td></tr>
+							<?php endif; ?>
+						</tbody>
+					</table>
+
+					<h3><?php esc_html_e( 'Behy ulohy', 'toptour-reference-finder' ); ?></h3>
+					<table class="wp-list-table widefat fixed striped" style="margin-bottom: 16px;">
+						<thead>
+							<tr>
+								<th><?php esc_html_e( 'Start', 'toptour-reference-finder' ); ?></th>
+								<th><?php esc_html_e( 'Koniec', 'toptour-reference-finder' ); ?></th>
+								<th><?php esc_html_e( 'Stav', 'toptour-reference-finder' ); ?></th>
+								<th><?php esc_html_e( 'Nalezy', 'toptour-reference-finder' ); ?></th>
+								<th><?php esc_html_e( 'Nove', 'toptour-reference-finder' ); ?></th>
+								<th><?php esc_html_e( 'Duplicity', 'toptour-reference-finder' ); ?></th>
+								<th><?php esc_html_e( 'Chyby', 'toptour-reference-finder' ); ?></th>
+							</tr>
+						</thead>
+						<tbody>
+							<?php if ( ! empty( $task_runs ) ) : ?>
+								<?php foreach ( $task_runs as $task_run ) : ?>
+									<tr>
+										<td><?php echo esc_html( $task_run->started_at ); ?></td>
+										<td><?php echo esc_html( $task_run->finished_at ?: '—' ); ?></td>
+										<td><?php echo esc_html( Toptour_Ref_Labels::task_run_status_label( $task_run->status ) ); ?></td>
+										<td><?php echo esc_html( (int) $task_run->found_count ); ?></td>
+										<td><?php echo esc_html( (int) $task_run->new_count ); ?></td>
+										<td><?php echo esc_html( (int) $task_run->duplicate_count ); ?></td>
+										<td><?php echo esc_html( (int) $task_run->error_count ); ?></td>
+									</tr>
+								<?php endforeach; ?>
+							<?php else : ?>
+								<tr><td colspan="7"><?php esc_html_e( 'Zatial bez zaznamenanych behov.', 'toptour-reference-finder' ); ?></td></tr>
+							<?php endif; ?>
+						</tbody>
+					</table>
+
+					<h3><?php esc_html_e( 'Historia', 'toptour-reference-finder' ); ?></h3>
+					<table class="wp-list-table widefat fixed striped">
+						<thead>
+							<tr>
+								<th><?php esc_html_e( 'Cas', 'toptour-reference-finder' ); ?></th>
+								<th><?php esc_html_e( 'Udalost', 'toptour-reference-finder' ); ?></th>
+								<th><?php esc_html_e( 'Poznamka', 'toptour-reference-finder' ); ?></th>
+							</tr>
+						</thead>
+						<tbody>
+							<?php if ( ! empty( $task_events ) ) : ?>
+								<?php foreach ( $task_events as $task_event ) : ?>
+									<tr>
+										<td><?php echo esc_html( $task_event->created_at ); ?></td>
+										<td><?php echo esc_html( Toptour_Ref_Labels::task_event_type_label( $task_event->event_type ) ); ?></td>
+										<td><?php echo esc_html( $task_event->note ?: '—' ); ?></td>
+									</tr>
+								<?php endforeach; ?>
+							<?php else : ?>
+								<tr><td colspan="3"><?php esc_html_e( 'Zatial bez udalosti.', 'toptour-reference-finder' ); ?></td></tr>
+							<?php endif; ?>
+						</tbody>
+					</table>
+				</div>
+			<?php endif; ?>
 		<?php endif; ?>
 
 	<?php else : ?>
@@ -741,15 +1083,15 @@ if ( $edit_task ) {
 		<table class="wp-list-table widefat fixed striped">
 			<thead>
 				<tr>
-					<th style="width:40px"><?php esc_html_e( 'ID', 'toptour-reference-finder' ); ?></th>
 					<th><?php esc_html_e( 'Nazov ulohy', 'toptour-reference-finder' ); ?></th>
-					<th><?php esc_html_e( 'Ciel', 'toptour-reference-finder' ); ?></th>
-					<th><?php esc_html_e( 'Ocakavany zdroj', 'toptour-reference-finder' ); ?></th>
+					<th><?php esc_html_e( 'Destinacia', 'toptour-reference-finder' ); ?></th>
 					<th><?php esc_html_e( 'Stav', 'toptour-reference-finder' ); ?></th>
-					<th><?php esc_html_e( 'Priorita', 'toptour-reference-finder' ); ?></th>
-					<th style="width:55px"><?php esc_html_e( 'Pokusy', 'toptour-reference-finder' ); ?></th>
+					<th><?php esc_html_e( 'Frekvencia', 'toptour-reference-finder' ); ?></th>
 					<th><?php esc_html_e( 'Posledne spustenie', 'toptour-reference-finder' ); ?></th>
-					<th><?php esc_html_e( 'Vytvorene', 'toptour-reference-finder' ); ?></th>
+					<th><?php esc_html_e( 'Dalsie spustenie', 'toptour-reference-finder' ); ?></th>
+					<th><?php esc_html_e( 'Nove nalezy', 'toptour-reference-finder' ); ?></th>
+					<th><?php esc_html_e( 'Caka na kontrolu', 'toptour-reference-finder' ); ?></th>
+					<th><?php esc_html_e( 'Chyby', 'toptour-reference-finder' ); ?></th>
 					<th><?php esc_html_e( 'Akcie', 'toptour-reference-finder' ); ?></th>
 				</tr>
 			</thead>
@@ -757,23 +1099,21 @@ if ( $edit_task ) {
 			<?php if ( $tasks ) : ?>
 				<?php foreach ( $tasks as $task ) : ?>
 					<?php
-					$target_col = Toptour_Ref_Labels::target_type_label( $task->target_type );
-					if ( ! empty( $task->target_id ) && (int) $task->target_id > 0 ) {
-						$target_col .= ' #' . $task->target_id;
-					}
+					$row_stats = Toptour_Ref_Collection_Tasks::get_task_stats( (int) $task->id );
+					$last_task_run = Toptour_Ref_Task_Runs::get_latest_run_for_task( (int) $task->id );
 					$edit_url = add_query_arg( [ 'toptour_action' => 'edit', 'task_id' => $task->id ], $base_url );
 					$archive_url = wp_nonce_url( add_query_arg( [ 'toptour_action' => 'archive', 'task_id' => $task->id ], $base_url ), 'toptour_archive_task_' . $task->id );
 					?>
 					<tr>
-						<td><?php echo esc_html( $task->id ); ?></td>
 						<td><?php echo esc_html( $task->task_title ); ?></td>
-						<td><?php echo esc_html( $target_col ); ?></td>
-						<td><?php echo esc_html( Toptour_Ref_Labels::expected_source_type_label( $task->expected_source_type ) ); ?></td>
+						<td><?php echo esc_html( Toptour_Ref_Collection_Tasks::get_destination_label( $task ) ); ?></td>
 						<td><?php echo esc_html( Toptour_Ref_Labels::task_status_label( $task->task_status ) ); ?></td>
-						<td><?php echo esc_html( Toptour_Ref_Labels::priority_label( $task->priority ) ); ?></td>
-						<td><?php echo esc_html( $task->attempts ); ?></td>
-						<td><?php echo $task->last_run_at ? esc_html( $task->last_run_at ) : '—'; ?></td>
-						<td><?php echo esc_html( $task->created_at ); ?></td>
+						<td><?php echo esc_html( Toptour_Ref_Labels::collection_frequency_label( $task->frequency ?? 'manual' ) ); ?></td>
+						<td><?php echo ! empty( $task->last_run_at ) ? esc_html( $task->last_run_at ) : ( $last_task_run && ! empty( $last_task_run->started_at ) ? esc_html( $last_task_run->started_at ) : '—' ); ?></td>
+						<td><?php echo ! empty( $task->next_run_at ) ? esc_html( $task->next_run_at ) : '—'; ?></td>
+						<td><?php echo esc_html( $row_stats['new_found'] ); ?></td>
+						<td><?php echo esc_html( $row_stats['pending_review'] ); ?></td>
+						<td><?php echo esc_html( $row_stats['error_count'] ); ?></td>
 						<td>
 							<a href="<?php echo esc_url( $edit_url ); ?>"><?php esc_html_e( 'Upravit', 'toptour-reference-finder' ); ?></a>
 							<?php if ( 'archived' !== $task->task_status ) : ?>

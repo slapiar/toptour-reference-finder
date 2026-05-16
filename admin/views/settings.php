@@ -37,10 +37,23 @@ $tables = [
 	'toptour_ref_discovery_runs',
 	'toptour_ref_discovery_candidates',
 	'toptour_ref_discovery_missing_fields',
+	'toptour_ref_offer_snapshots',
 ];
 
 $prefix = $wpdb->prefix;
 $now = current_time( 'mysql' );
+$mode_notice = '';
+
+if ( $_SERVER['REQUEST_METHOD'] === 'POST' && isset( $_POST['toptour_ref_mode_submit'] ) ) {
+	check_admin_referer( 'toptour_ref_save_mode' );
+	$requested_mode = sanitize_text_field( wp_unslash( $_POST['toptour_ref_finder_mode'] ?? 'manual' ) );
+	$saved_mode = Toptour_Ref_Task_Processor::set_mode( $requested_mode );
+	$mode_notice = 'automatic' === $saved_mode
+		? __( 'Automaticky rezim bol zapnuty.', 'toptour-reference-finder' )
+		: __( 'Manualny rezim bol zapnuty.', 'toptour-reference-finder' );
+}
+
+$finder_mode = Toptour_Ref_Task_Processor::get_mode();
 
 // Prepare diagnostics data
 $diagnostics = [];
@@ -83,6 +96,28 @@ if ( $wpdb->get_var( $wpdb->prepare( "SHOW TABLES LIKE %s", $signal_table ) ) ) 
 ?>
 <div class="wrap toptour-ref-settings">
 	<h1><?php esc_html_e( 'TOPTOUR Reference Finder – Settings & Diagnostics', 'toptour-reference-finder' ); ?></h1>
+
+	<?php if ( $mode_notice ) : ?>
+		<div class="notice notice-success is-dismissible"><p><?php echo esc_html( $mode_notice ); ?></p></div>
+	<?php endif; ?>
+
+	<h2><?php esc_html_e( 'Finder mode', 'toptour-reference-finder' ); ?></h2>
+	<form method="post" action="">
+		<?php wp_nonce_field( 'toptour_ref_save_mode' ); ?>
+		<input type="hidden" name="toptour_ref_mode_submit" value="1">
+		<select name="toptour_ref_finder_mode">
+			<option value="manual" <?php selected( $finder_mode, 'manual' ); ?>><?php esc_html_e( 'Manual', 'toptour-reference-finder' ); ?></option>
+			<option value="automatic" <?php selected( $finder_mode, 'automatic' ); ?>><?php esc_html_e( 'Automatic', 'toptour-reference-finder' ); ?></option>
+		</select>
+		<?php submit_button( __( 'Ulozit rezim', 'toptour-reference-finder' ), 'secondary', '', false ); ?>
+	</form>
+	<p>
+		<?php if ( 'manual' === $finder_mode ) : ?>
+			<?php esc_html_e( 'Automatické spúšťanie je vypnuté. Úlohy sa spúšťajú iba ručne.', 'toptour-reference-finder' ); ?>
+		<?php else : ?>
+			<?php esc_html_e( 'Automatické spúšťanie je zapnuté. Aktívne úlohy sa spracujú podľa frequency a next_run_at.', 'toptour-reference-finder' ); ?>
+		<?php endif; ?>
+	</p>
 
 	<h2><?php esc_html_e( 'Database status', 'toptour-reference-finder' ); ?></h2>
 	<table class="widefat fixed striped">

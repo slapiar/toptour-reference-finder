@@ -1,4 +1,27 @@
 
+## 0.2.5
+- Opravená frequency logika pre výpočet `next_run_at`: `twice_daily` = +12h, `three_times_daily` = +8h, `six_daily` = +4h.
+- Pridané analytické metadáta referencií vo Findings: časové údaje, language/type, analysis summary/status, confidence a mapovacie poznámky.
+- Pridaná vrstva Source Offer Snapshot cez tabuľku `toptour_ref_offer_snapshots`.
+- Doplnené časové údaje referencie a analýzy pre lifecycle run.
+- Doplnené väzby finding -> offer snapshot -> destination/supplier/offer.
+- Doplnené eventy pre reference analysis / offer snapshot / POI candidate a run_skipped.
+- Doplnené napojenie analytickej vrstvy na task run lifecycle (manual test run + automatický scheduler hook).
+- Doplnený WP-Cron hook `toptour_ref_process_collection_tasks` (bez externého scrapingu a HTTP zberu).
+- Doplnený manual/automatic režim Finderu s predvoleným režimom `manual`.
+- Doplnené ručné testovacie spustenie v detaile Collection Task.
+
+## 0.2.4
+- Extended Collection Tasks schema with scheduling and linkage fields (frequency, next_run_at, destination_id, supplier_id, offer_id, created_by).
+- Added Task Runs table for storing individual task executions with run counters and summaries.
+- Extended Findings schema with task_id/run_id linkage and lifecycle/audit fields for long-term tracking.
+- Added Task Events table for task audit timeline and manager decisions history.
+- Added Task Runs and Task Events data classes.
+- Extended Collection Tasks admin list with destination, frequency, next run and manager metrics (new findings, pending review, errors).
+- Added Collection Task detail MVP blocks: overview, recent findings, recent runs and event timeline.
+- Added safe event logging hooks in task save/archive and discovery workflow actions.
+- Updated DB schema version to 0.2.1.
+
 ## 0.2.2
 - Fixed release packaging to use a temporary staging directory.
 - Prevented build/dist artifacts from being tracked in Git.

@@ -39,6 +39,18 @@ class Toptour_Ref_Findings {
 		return [ 'new', 'checked', 'confirmed', 'disputed', 'rejected', 'archived' ];
 	}
 
+	public static function get_allowed_statuses() {
+		return [ 'new', 'pending_review', 'accepted', 'rejected', 'duplicate', 'needs_verification' ];
+	}
+
+	public static function get_allowed_reference_types() {
+		return [ 'guest_review', 'supplier_testimonial', 'platform_rating', 'article_mention', 'social_mention', 'other' ];
+	}
+
+	public static function get_allowed_analysis_statuses() {
+		return [ 'pending', 'analyzed', 'needs_review', 'accepted', 'rejected' ];
+	}
+
 	public static function get_allowed_evidence_types() {
 		return [ 'text', 'review_excerpt', 'guest_photo', 'official_photo', 'video', 'own_observation', 'resident_feedback', 'client_feedback', 'source_crosscheck', 'mixed', 'other' ];
 	}
@@ -158,6 +170,34 @@ class Toptour_Ref_Findings {
 			self::get_table_name(),
 			[
 				'finding_title'             => $data['finding_title'],
+				'task_id'                   => $data['task_id'],
+				'run_id'                    => $data['run_id'],
+				'source_url'                => $data['source_url'],
+				'source_title'              => $data['source_title'],
+				'source_type'               => $data['source_type'],
+				'excerpt'                   => $data['excerpt'],
+				'detected_sentiment'        => $data['detected_sentiment'],
+				'review_published_at'       => ( $data['review_published_at'] ?? '' ) === '' ? null : $data['review_published_at'],
+				'analysis_performed_at'     => ( $data['analysis_performed_at'] ?? '' ) === '' ? null : $data['analysis_performed_at'],
+				'source_detected_at'        => ( $data['source_detected_at'] ?? '' ) === '' ? null : $data['source_detected_at'],
+				'source_last_checked_at'    => ( $data['source_last_checked_at'] ?? '' ) === '' ? null : $data['source_last_checked_at'],
+				'reference_language'        => $data['reference_language'] ?? '',
+				'reference_type'            => $data['reference_type'] ?? 'other',
+				'analysis_summary'          => $data['analysis_summary'] ?? '',
+				'analysis_status'           => $data['analysis_status'] ?? 'pending',
+				'confidence_score'          => $data['confidence_score'] ?? null,
+				'destination_mapping_note'  => $data['destination_mapping_note'] ?? '',
+				'poi_extraction_note'       => $data['poi_extraction_note'] ?? '',
+				'offer_relation_note'       => $data['offer_relation_note'] ?? '',
+				'poi_candidate_id'          => $data['poi_candidate_id'],
+				'destination_id'            => $data['destination_id'],
+				'supplier_id'               => $data['supplier_id'],
+				'offer_id'                  => $data['offer_id'],
+				'hash'                      => $data['hash'],
+				'status'                    => $data['status'],
+				'found_at'                  => $data['found_at'] === '' ? null : $data['found_at'],
+				'reviewed_by'               => $data['reviewed_by'],
+				'reviewed_at'               => $data['reviewed_at'] === '' ? null : $data['reviewed_at'],
 				'source_id'                 => $data['source_id'],
 				'signal_pattern_id'         => $data['signal_pattern_id'],
 				'target_type'               => $data['target_type'],
@@ -189,6 +229,34 @@ class Toptour_Ref_Findings {
 			self::get_table_name(),
 			[
 				'finding_title'             => $data['finding_title'],
+				'task_id'                   => $data['task_id'],
+				'run_id'                    => $data['run_id'],
+				'source_url'                => $data['source_url'],
+				'source_title'              => $data['source_title'],
+				'source_type'               => $data['source_type'],
+				'excerpt'                   => $data['excerpt'],
+				'detected_sentiment'        => $data['detected_sentiment'],
+				'review_published_at'       => ( $data['review_published_at'] ?? '' ) === '' ? null : $data['review_published_at'],
+				'analysis_performed_at'     => ( $data['analysis_performed_at'] ?? '' ) === '' ? null : $data['analysis_performed_at'],
+				'source_detected_at'        => ( $data['source_detected_at'] ?? '' ) === '' ? null : $data['source_detected_at'],
+				'source_last_checked_at'    => ( $data['source_last_checked_at'] ?? '' ) === '' ? null : $data['source_last_checked_at'],
+				'reference_language'        => $data['reference_language'] ?? '',
+				'reference_type'            => $data['reference_type'] ?? 'other',
+				'analysis_summary'          => $data['analysis_summary'] ?? '',
+				'analysis_status'           => $data['analysis_status'] ?? 'pending',
+				'confidence_score'          => $data['confidence_score'] ?? null,
+				'destination_mapping_note'  => $data['destination_mapping_note'] ?? '',
+				'poi_extraction_note'       => $data['poi_extraction_note'] ?? '',
+				'offer_relation_note'       => $data['offer_relation_note'] ?? '',
+				'poi_candidate_id'          => $data['poi_candidate_id'],
+				'destination_id'            => $data['destination_id'],
+				'supplier_id'               => $data['supplier_id'],
+				'offer_id'                  => $data['offer_id'],
+				'hash'                      => $data['hash'],
+				'status'                    => $data['status'],
+				'found_at'                  => $data['found_at'] === '' ? null : $data['found_at'],
+				'reviewed_by'               => $data['reviewed_by'],
+				'reviewed_at'               => $data['reviewed_at'] === '' ? null : $data['reviewed_at'],
 				'source_id'                 => $data['source_id'],
 				'signal_pattern_id'         => $data['signal_pattern_id'],
 				'target_type'               => $data['target_type'],
@@ -230,9 +298,40 @@ class Toptour_Ref_Findings {
 	public static function sanitize_finding_data( $input ) {
 		$evidence_url_raw = trim( (string) ( $input['evidence_url'] ?? '' ) );
 		$evidence_url     = $evidence_url_raw === '' ? '' : esc_url_raw( $evidence_url_raw );
+		$source_url_raw   = trim( (string) ( $input['source_url'] ?? '' ) );
+		$source_url       = $source_url_raw === '' ? '' : esc_url_raw( $source_url_raw );
 
 		return [
 			'finding_title'              => sanitize_text_field( $input['finding_title'] ?? '' ),
+			'task_id'                    => absint( $input['task_id'] ?? 0 ),
+			'run_id'                     => absint( $input['run_id'] ?? 0 ),
+			'source_url'                 => $source_url,
+			'source_url_raw'             => $source_url_raw,
+			'source_title'               => sanitize_text_field( $input['source_title'] ?? '' ),
+			'source_type'                => sanitize_text_field( $input['source_type'] ?? '' ),
+			'excerpt'                    => sanitize_textarea_field( $input['excerpt'] ?? '' ),
+			'detected_sentiment'         => sanitize_text_field( $input['detected_sentiment'] ?? '' ),
+			'review_published_at'        => sanitize_text_field( str_replace( 'T', ' ', $input['review_published_at'] ?? '' ) ),
+			'analysis_performed_at'      => sanitize_text_field( str_replace( 'T', ' ', $input['analysis_performed_at'] ?? '' ) ),
+			'source_detected_at'         => sanitize_text_field( str_replace( 'T', ' ', $input['source_detected_at'] ?? '' ) ),
+			'source_last_checked_at'     => sanitize_text_field( str_replace( 'T', ' ', $input['source_last_checked_at'] ?? '' ) ),
+			'reference_language'         => sanitize_text_field( $input['reference_language'] ?? '' ),
+			'reference_type'             => sanitize_text_field( $input['reference_type'] ?? 'other' ),
+			'analysis_summary'           => sanitize_textarea_field( $input['analysis_summary'] ?? '' ),
+			'analysis_status'            => sanitize_text_field( $input['analysis_status'] ?? 'pending' ),
+			'confidence_score'           => ( $input['confidence_score'] ?? '' ) === '' ? null : floatval( $input['confidence_score'] ),
+			'destination_mapping_note'   => sanitize_textarea_field( $input['destination_mapping_note'] ?? '' ),
+			'poi_extraction_note'        => sanitize_textarea_field( $input['poi_extraction_note'] ?? '' ),
+			'offer_relation_note'        => sanitize_textarea_field( $input['offer_relation_note'] ?? '' ),
+			'poi_candidate_id'           => absint( $input['poi_candidate_id'] ?? 0 ),
+			'destination_id'             => absint( $input['destination_id'] ?? 0 ),
+			'supplier_id'                => absint( $input['supplier_id'] ?? 0 ),
+			'offer_id'                   => absint( $input['offer_id'] ?? 0 ),
+			'hash'                       => sanitize_text_field( $input['hash'] ?? '' ),
+			'status'                     => sanitize_text_field( $input['status'] ?? 'new' ),
+			'found_at'                   => sanitize_text_field( str_replace( 'T', ' ', $input['found_at'] ?? '' ) ),
+			'reviewed_by'                => absint( $input['reviewed_by'] ?? 0 ),
+			'reviewed_at'                => sanitize_text_field( str_replace( 'T', ' ', $input['reviewed_at'] ?? '' ) ),
 			'source_id'                  => absint( $input['source_id'] ?? 0 ),
 			'signal_pattern_id'          => absint( $input['signal_pattern_id'] ?? 0 ),
 			'target_type'                => sanitize_text_field( $input['target_type'] ?? 'general' ),
@@ -300,6 +399,26 @@ class Toptour_Ref_Findings {
 
 		if ( ! in_array( $data['evidence_type'], self::get_allowed_evidence_types(), true ) ) {
 			$errors[] = 'invalid evidence_type';
+		}
+
+		if ( ! in_array( $data['status'], self::get_allowed_statuses(), true ) ) {
+			$errors[] = 'invalid status';
+		}
+
+		if ( $data['reference_type'] !== '' && ! in_array( $data['reference_type'], self::get_allowed_reference_types(), true ) ) {
+			$errors[] = 'invalid reference_type';
+		}
+
+		if ( ! in_array( $data['analysis_status'], self::get_allowed_analysis_statuses(), true ) ) {
+			$errors[] = 'invalid analysis_status';
+		}
+
+		if ( null !== $data['confidence_score'] && ( $data['confidence_score'] < 0 || $data['confidence_score'] > 100 ) ) {
+			$errors[] = 'invalid confidence_score';
+		}
+
+		if ( ! empty( $data['source_url_raw'] ) && $data['source_url'] === '' ) {
+			$errors[] = 'invalid source_url';
 		}
 
 		if ( ! empty( $data['evidence_url_raw'] ) && $data['evidence_url'] === '' ) {
