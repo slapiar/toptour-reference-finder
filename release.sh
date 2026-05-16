@@ -16,8 +16,9 @@ if ! git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
 fi
 
 CURRENT_BRANCH="$(git branch --show-current)"
-if [[ "$CURRENT_BRANCH" == "main" ]]; then
-  echo "Chyba: release nerob priamo na main."
+
+if [[ -z "$CURRENT_BRANCH" ]]; then
+  echo "Chyba: nepodarilo sa zistiť aktuálnu vetvu."
   exit 1
 fi
 
@@ -136,6 +137,11 @@ rsync -av \
 ZIP_FILE="$DIST_DIR/${PLUGIN_SLUG}-${NEW_VERSION}.zip"
 SHA_FILE="$ZIP_FILE.sha256"
 ZIP_FILE_ABS="$(pwd)/$ZIP_FILE"
+TAG_EXISTS=0
+
+if git rev-parse -q --verify "refs/tags/v$NEW_VERSION" >/dev/null 2>&1; then
+  TAG_EXISTS=1
+fi
 
 rm -f "$ZIP_FILE" "$SHA_FILE"
 
@@ -146,7 +152,7 @@ rm -f "$ZIP_FILE" "$SHA_FILE"
 
 sha256sum "$ZIP_FILE" > "$SHA_FILE"
 
-git tag "v$NEW_VERSION"
+git tag -f "v$NEW_VERSION"
 
 echo
 echo "Hotovo."
@@ -156,4 +162,8 @@ echo "Tag:    v$NEW_VERSION"
 echo
 echo "Ďalšie kroky:"
 echo "  git push"
-echo "  git push --tags"
+if [[ "$TAG_EXISTS" -eq 1 ]]; then
+  echo "  git push --force origin v$NEW_VERSION"
+else
+  echo "  git push --tags"
+fi
