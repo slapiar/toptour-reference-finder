@@ -19,7 +19,7 @@ class Toptour_Ref_AI_Bridge {
 	public static function get_settings() {
 		$defaults = [
 			'ai_bridge_enabled' => 0,
-			'ai_model' => 'gpt-4.1-mini',
+			'ai_model' => 'gpt-4o-mini',
 			'ai_api_key' => '',
 			'ai_max_tokens' => 1800,
 			'ai_temperature' => 0.2,
@@ -38,7 +38,7 @@ class Toptour_Ref_AI_Bridge {
 
 	public static function save_settings( $input ) {
 		$enabled = ! empty( $input['ai_bridge_enabled'] ) ? 1 : 0;
-		$model = sanitize_text_field( $input['ai_model'] ?? 'gpt-4.1-mini' );
+		$model = sanitize_text_field( $input['ai_model'] ?? 'gpt-4o-mini' );
 		$api_key = sanitize_text_field( $input['ai_api_key'] ?? '' );
 		$max_tokens = max( 300, min( 8000, absint( $input['ai_max_tokens'] ?? 1800 ) ) );
 		$temperature = max( 0, min( 1, floatval( $input['ai_temperature'] ?? 0.2 ) ) );
@@ -323,7 +323,7 @@ class Toptour_Ref_AI_Bridge {
 		$user = "OTAZKA:\n" . $question . "\n\nKONTEXT JSON:\n" . $context . "\n\nOBMEDZENIA:\n" . $constraints . "\n\nSCHEMA HINT:\n" . wp_json_encode( $schema_hint, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE );
 
 		$body = [
-			'model' => sanitize_text_field( (string) ( $settings['ai_model'] ?? 'gpt-4.1-mini' ) ),
+			'model' => sanitize_text_field( (string) ( $settings['ai_model'] ?? 'gpt-4o-mini' ) ),
 			'messages' => [
 				[ 'role' => 'system', 'content' => $system ],
 				[ 'role' => 'user', 'content' => $user ],
@@ -356,9 +356,17 @@ class Toptour_Ref_AI_Bridge {
 
 		$code = absint( wp_remote_retrieve_response_code( $response ) );
 		if ( $code < 200 || $code >= 300 ) {
+			$err_body    = (string) wp_remote_retrieve_body( $response );
+			$err_decoded = json_decode( $err_body, true );
+			$err_detail  = '';
+			if ( is_array( $err_decoded ) && isset( $err_decoded['error']['message'] ) ) {
+				$err_detail = ' — ' . sanitize_text_field( (string) $err_decoded['error']['message'] );
+			} elseif ( '' !== trim( $err_body ) ) {
+				$err_detail = ' — ' . sanitize_text_field( substr( $err_body, 0, 300 ) );
+			}
 			return [
 				'success' => false,
-				'message' => 'OpenAI HTTP ' . $code,
+				'message' => 'OpenAI HTTP ' . $code . $err_detail,
 			];
 		}
 

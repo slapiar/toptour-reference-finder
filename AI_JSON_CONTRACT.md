@@ -310,7 +310,7 @@ Optional top-level fields:
     "question": "Find candidate negative signals for Sardinia resorts based on provided context."
   },
   "ai": {
-    "model": "gpt-4.1-mini",
+    "model": "gpt-4o-mini",
     "raw_response": "{...json from model...}"
   },
   "structured_output": {

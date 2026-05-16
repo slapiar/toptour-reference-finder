@@ -78,7 +78,7 @@ if ( $_SERVER['REQUEST_METHOD'] === 'POST' && isset( $_POST['toptour_ref_ai_brid
 	Toptour_Ref_AI_Bridge::save_settings(
 		[
 			'ai_bridge_enabled' => absint( $_POST['ai_bridge_enabled'] ?? 0 ),
-			'ai_model' => sanitize_text_field( wp_unslash( $_POST['ai_model'] ?? 'gpt-4.1-mini' ) ),
+			'ai_model' => sanitize_text_field( wp_unslash( $_POST['ai_model'] ?? 'gpt-4o-mini' ) ),
 			'ai_api_key' => sanitize_text_field( wp_unslash( $_POST['ai_api_key'] ?? '' ) ),
 			'ai_max_tokens' => absint( $_POST['ai_max_tokens'] ?? 1800 ),
 			'ai_temperature' => floatval( $_POST['ai_temperature'] ?? 0.2 ),
@@ -314,7 +314,7 @@ if ( $wpdb->get_var( $wpdb->prepare( "SHOW TABLES LIKE %s", $signal_table ) ) ) 
 				</tr>
 				<tr>
 					<th scope="row"><label for="ai_model"><?php esc_html_e( 'ai_model', 'toptour-reference-finder' ); ?></label></th>
-					<td><input type="text" id="ai_model" name="ai_model" class="regular-text" value="<?php echo esc_attr( $ai_settings['ai_model'] ); ?>" placeholder="gpt-4.1-mini"></td>
+					<td><input type="text" id="ai_model" name="ai_model" class="regular-text" value="<?php echo esc_attr( $ai_settings['ai_model'] ); ?>" placeholder="gpt-4o-mini"></td>
 				</tr>
 				<tr>
 					<th scope="row"><label for="ai_api_key"><?php esc_html_e( 'ai_api_key', 'toptour-reference-finder' ); ?></label></th>
