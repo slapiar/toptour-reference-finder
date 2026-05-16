@@ -3,7 +3,6 @@ set -euo pipefail
 
 PLUGIN_SLUG="toptour-reference-finder"
 PLUGIN_FILE="toptour-reference-finder.php"
-BUILD_DIR="build"
 DIST_DIR="dist"
 
 if [[ ! -f "$PLUGIN_FILE" ]]; then
@@ -107,15 +106,21 @@ fi
 git add "$PLUGIN_FILE"
 git commit -m "chore(release): bump version to $NEW_VERSION"
 
-mkdir -p "$BUILD_DIR" "$DIST_DIR"
-rm -rf "$BUILD_DIR/$PLUGIN_SLUG"
-mkdir -p "$BUILD_DIR/$PLUGIN_SLUG"
+mkdir -p "$DIST_DIR"
+
+STAGING_ROOT="$(mktemp -d "${TMPDIR:-/tmp}/${PLUGIN_SLUG}-release-XXXXXX")"
+cleanup_staging() {
+  rm -rf "$STAGING_ROOT"
+}
+trap cleanup_staging EXIT
+
+mkdir -p "$STAGING_ROOT/$PLUGIN_SLUG"
 
 rsync -av \
   --exclude=".git" \
   --exclude=".github" \
   --exclude=".vscode" \
-  --exclude="$BUILD_DIR" \
+  --exclude="build" \
   --exclude="$DIST_DIR" \
   --exclude="*.zip" \
   --exclude="*.tar.gz" \
@@ -126,25 +131,20 @@ rsync -av \
   --exclude="vendor" \
   --exclude="release.sh" \
   --exclude="zdrojak.sh" \
-  ./ "$BUILD_DIR/$PLUGIN_SLUG/"
+  ./ "$STAGING_ROOT/$PLUGIN_SLUG/"
 
 ZIP_FILE="$DIST_DIR/${PLUGIN_SLUG}-${NEW_VERSION}.zip"
 SHA_FILE="$ZIP_FILE.sha256"
+ZIP_FILE_ABS="$(pwd)/$ZIP_FILE"
 
 rm -f "$ZIP_FILE" "$SHA_FILE"
 
 (
-  cd "$BUILD_DIR"
-  zip -r "../$ZIP_FILE" "$PLUGIN_SLUG" >/dev/null
+  cd "$STAGING_ROOT"
+  zip -r "$ZIP_FILE_ABS" "$PLUGIN_SLUG" >/dev/null
 )
 
 sha256sum "$ZIP_FILE" > "$SHA_FILE"
-
-# Clean staging copy after packaging to keep workspace tidy.
-rm -rf "$BUILD_DIR/$PLUGIN_SLUG"
-
-# Remove empty build directory if nothing else is inside.
-rmdir "$BUILD_DIR" 2>/dev/null || true
 
 git tag "v$NEW_VERSION"
 
