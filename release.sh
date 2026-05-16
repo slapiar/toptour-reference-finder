@@ -140,6 +140,12 @@ rm -f "$ZIP_FILE" "$SHA_FILE"
 
 sha256sum "$ZIP_FILE" > "$SHA_FILE"
 
+# Clean staging copy after packaging to keep workspace tidy.
+rm -rf "$BUILD_DIR/$PLUGIN_SLUG"
+
+# Remove empty build directory if nothing else is inside.
+rmdir "$BUILD_DIR" 2>/dev/null || true
+
 git tag "v$NEW_VERSION"
 
 echo
