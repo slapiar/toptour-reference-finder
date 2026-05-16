@@ -30,6 +30,8 @@ class Toptour_Ref_Task_Events {
 			'run_started',
 			'run_attempt_started',
 			'run_suspect',
+			'run_deferred_existing_run',
+			'run_marked_stale',
 			'run_retry_scheduled',
 			'run_reset_automatic',
 			'run_failed_max_attempts',

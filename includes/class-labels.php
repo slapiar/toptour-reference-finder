@@ -423,6 +423,8 @@ class Toptour_Ref_Labels {
 				'run_started' => 'Beh spustený',
 				'run_attempt_started' => 'Pokus behu spustený',
 				'run_suspect' => 'Beh podozrivý',
+				'run_deferred_existing_run' => 'Beh odložený kvôli existujúcemu behu',
+				'run_marked_stale' => 'Beh označený ako zastaraný',
 				'run_retry_scheduled' => 'Opakovanie naplánované',
 				'run_reset_automatic' => 'Automatický reset',
 				'run_failed_max_attempts' => 'Beh zlyhal po max. pokusoch',

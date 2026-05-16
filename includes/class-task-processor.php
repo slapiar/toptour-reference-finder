@@ -14,6 +14,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 class Toptour_Ref_Task_Processor {
 	private const MAX_ATTEMPTS = 3;
+	private const RUN_STALE_SECONDS = 1800;
 
 	public static function get_mode() {
 		$mode = sanitize_text_field( (string) get_option( 'toptour_ref_finder_mode', 'manual' ) );
@@ -73,6 +74,57 @@ class Toptour_Ref_Task_Processor {
 		if ( 'automatic' === $mode && ! in_array( (string) $task->frequency, [ 'daily', 'twice_daily', 'three_times_daily', 'six_daily' ], true ) ) {
 			Toptour_Ref_Task_Events::log_event( $task->id, 'run_skipped', null, [ 'frequency' => (string) $task->frequency ], 'Automatic processing skipped: unknown frequency.' );
 			return [ 'success' => false, 'message' => 'Skipped: unknown frequency.' ];
+		}
+
+		$latest_run = Toptour_Ref_Task_Runs::get_latest_run_for_task( $task->id );
+		if ( $latest_run && 'running' === (string) $latest_run->status ) {
+			$started_at = strtotime( (string) $latest_run->started_at );
+			$age_seconds = $started_at ? max( 0, current_time( 'timestamp' ) - $started_at ) : self::RUN_STALE_SECONDS;
+
+			if ( $age_seconds < self::RUN_STALE_SECONDS ) {
+				Toptour_Ref_Task_Events::log_event(
+					$task->id,
+					'run_deferred_existing_run',
+					null,
+					[
+						'run_id' => (int) $latest_run->id,
+						'age_seconds' => $age_seconds,
+					],
+					'Beh úlohy už prebieha. Nový pokus bol odložený.'
+				);
+				return [ 'success' => false, 'message' => 'Existing run still running.' ];
+			}
+
+			Toptour_Ref_Task_Runs::update_run(
+				(int) $latest_run->id,
+				[
+					'status' => 'failed',
+					'finished_at' => current_time( 'mysql' ),
+					'error_count' => absint( $latest_run->error_count ) + 1,
+					'summary' => 'Stale running run closed automatically.',
+				]
+			);
+			Toptour_Ref_Task_Events::log_event(
+				$task->id,
+				'run_marked_stale',
+				null,
+				[
+					'run_id' => (int) $latest_run->id,
+					'age_seconds' => $age_seconds,
+				],
+				'Beh bol označený ako zastaraný a uzavretý.'
+			);
+			Toptour_Ref_Task_Events::log_event(
+				$task->id,
+				'run_reset_automatic',
+				null,
+				[
+					'run_id' => (int) $latest_run->id,
+					'reason' => 'stale_run',
+				],
+				'Automatický reset odblokoval úlohu po zastaranom behu.'
+			);
+			Toptour_Ref_Collection_Tasks::touch_task_run( $task->id, 'active' );
 		}
 
 		$attempt_number = min( self::MAX_ATTEMPTS, max( 1, absint( $task->attempts ) + 1 ) );
