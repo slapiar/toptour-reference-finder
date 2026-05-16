@@ -1,0 +1,10 @@
+/build/
+/dist/
+*.zip
+*.tar.gz
+*.bundle
+*.sha256
+*.log
+.DS_Store
+node_modules/
+vendor/
