@@ -47,7 +47,16 @@ class Toptour_Ref_Collection_Tasks {
 	 * @return string[]
 	 */
 	public static function get_allowed_statuses() {
-		return [ 'pending', 'in_progress', 'done', 'failed', 'needs_review', 'archived' ];
+		return [ 'draft', 'active', 'paused', 'archived', 'pending', 'in_progress', 'done', 'failed', 'needs_review' ];
+	}
+
+	/**
+	 * Allowed values for frequency.
+	 *
+	 * @return string[]
+	 */
+	public static function get_allowed_frequencies() {
+		return [ 'manual', 'daily', 'twice_daily', 'three_times_daily', 'six_daily', 'custom' ];
 	}
 
 	/**
@@ -194,10 +203,17 @@ class Toptour_Ref_Collection_Tasks {
 	public static function create_task( $data ) {
 		global $wpdb;
 		$now = current_time( 'mysql' );
+		$created_by = ! empty( $data['created_by'] ) ? absint( $data['created_by'] ) : (int) get_current_user_id();
 		$result = $wpdb->insert(
 			self::get_table_name(),
 			[
 				'task_title'           => $data['task_title'],
+				'destination_id'       => $data['destination_id'],
+				'supplier_id'          => $data['supplier_id'],
+				'offer_id'             => $data['offer_id'],
+				'frequency'            => $data['frequency'],
+				'next_run_at'          => $data['next_run_at'] === '' ? null : $data['next_run_at'],
+				'created_by'           => $created_by,
 				'target_type'          => $data['target_type'],
 				'target_id'            => $data['target_id'],
 				'query_text'           => $data['query_text'],
@@ -224,10 +240,20 @@ class Toptour_Ref_Collection_Tasks {
 	 */
 	public static function update_task( $id, $data ) {
 		global $wpdb;
+		$existing_task = self::get_task( $id );
+		$attempts = absint( $existing_task->attempts ?? 0 );
+		if ( $existing_task && 'failed' === (string) ( $existing_task->task_status ?? '' ) && 'failed' !== (string) ( $data['task_status'] ?? '' ) ) {
+			$attempts = 0;
+		}
 		$result = $wpdb->update(
 			self::get_table_name(),
 			[
 				'task_title'           => $data['task_title'],
+				'destination_id'       => $data['destination_id'],
+				'supplier_id'          => $data['supplier_id'],
+				'offer_id'             => $data['offer_id'],
+				'frequency'            => $data['frequency'],
+				'next_run_at'          => $data['next_run_at'] === '' ? null : $data['next_run_at'],
 				'target_type'          => $data['target_type'],
 				'target_id'            => $data['target_id'],
 				'query_text'           => $data['query_text'],
@@ -237,6 +263,7 @@ class Toptour_Ref_Collection_Tasks {
 				'priority'             => $data['priority'],
 				'assigned_to'          => $data['assigned_to'],
 				'notes'                => $data['notes'],
+				'attempts'             => $attempts,
 				'updated_at'           => current_time( 'mysql' ),
 			],
 			[ 'id' => absint( $id ) ]
@@ -270,8 +297,16 @@ class Toptour_Ref_Collection_Tasks {
 	 * @return array
 	 */
 	public static function sanitize_task_data( $input ) {
+		$next_run_at = sanitize_text_field( str_replace( 'T', ' ', $input['next_run_at'] ?? '' ) );
+
 		return [
 			'task_title'           => sanitize_text_field( $input['task_title'] ?? '' ),
+			'destination_id'       => absint( $input['destination_id'] ?? 0 ),
+			'supplier_id'          => absint( $input['supplier_id'] ?? 0 ),
+			'offer_id'             => absint( $input['offer_id'] ?? 0 ),
+			'frequency'            => sanitize_text_field( $input['frequency'] ?? 'manual' ),
+			'next_run_at'          => $next_run_at,
+			'created_by'           => absint( $input['created_by'] ?? 0 ),
 			'target_type'          => sanitize_text_field( $input['target_type'] ?? 'general' ),
 			'target_id'            => absint( $input['target_id'] ?? 0 ),
 			'query_text'           => sanitize_textarea_field( $input['query_text'] ?? '' ),
@@ -309,10 +344,81 @@ class Toptour_Ref_Collection_Tasks {
 			$errors[] = 'Invalid task_status.';
 		}
 
+		if ( ! in_array( $data['frequency'], self::get_allowed_frequencies(), true ) ) {
+			$errors[] = 'Invalid frequency.';
+		}
+
 		if ( ! in_array( $data['priority'], self::get_allowed_priorities(), true ) ) {
 			$errors[] = 'Invalid priority.';
 		}
 
 		return $errors ? $errors : true;
+	}
+
+	/**
+	 * Build summary stats for a task detail.
+	 *
+	 * @param int $task_id Task ID.
+	 * @return array
+	 */
+	public static function get_task_stats( $task_id ) {
+		global $wpdb;
+
+		$task_id = absint( $task_id );
+		$findings_table = Toptour_Ref_Findings::get_table_name();
+		$runs_table = Toptour_Ref_Task_Runs::get_table_name();
+
+		$total_found = (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM $findings_table WHERE task_id = %d OR related_collection_task_id = %d", $task_id, $task_id ) );
+		$new_found = (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM $findings_table WHERE (task_id = %d OR related_collection_task_id = %d) AND (status = %s OR verification_status = %s)", $task_id, $task_id, 'new', 'new' ) );
+		$pending_review = (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM $findings_table WHERE (task_id = %d OR related_collection_task_id = %d) AND (status = %s OR verification_status = %s)", $task_id, $task_id, 'pending_review', 'checked' ) );
+		$poi_suggestions = (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM $findings_table WHERE (task_id = %d OR related_collection_task_id = %d) AND poi_candidate_id > 0", $task_id, $task_id ) );
+		$error_count = (int) $wpdb->get_var( $wpdb->prepare( "SELECT COALESCE(SUM(error_count),0) FROM $runs_table WHERE task_id = %d", $task_id ) );
+
+		return [
+			'total_found' => $total_found,
+			'new_found' => $new_found,
+			'pending_review' => $pending_review,
+			'poi_suggestions' => $poi_suggestions,
+			'error_count' => $error_count,
+		];
+	}
+
+	/**
+	 * Get recent findings for task detail preview.
+	 *
+	 * @param int $task_id Task ID.
+	 * @param int $limit Result limit.
+	 * @return array
+	 */
+	public static function get_recent_findings( $task_id, $limit = 10 ) {
+		global $wpdb;
+		$table = Toptour_Ref_Findings::get_table_name();
+		return $wpdb->get_results(
+			$wpdb->prepare(
+				"SELECT * FROM $table WHERE task_id = %d OR related_collection_task_id = %d ORDER BY COALESCE(found_at, created_at) DESC LIMIT %d",
+				absint( $task_id ),
+				absint( $task_id ),
+				max( 1, absint( $limit ) )
+			)
+		);
+	}
+
+	/**
+	 * Resolve destination label for task.
+	 *
+	 * @param object $task Task row.
+	 * @return string
+	 */
+	public static function get_destination_label( $task ) {
+		if ( ! $task || empty( $task->destination_id ) ) {
+			return '—';
+		}
+
+		$destination = Toptour_Ref_Destinations::get_destination( absint( $task->destination_id ) );
+		if ( $destination && ! empty( $destination->name ) ) {
+			return $destination->name;
+		}
+
+		return 'destination#' . absint( $task->destination_id );
 	}
 }

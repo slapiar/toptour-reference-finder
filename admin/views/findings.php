@@ -105,6 +105,49 @@ function toptour_finding_textarea( $field, $finding, $post_data, $default = '' )
 	return $default;
 }
 
+if ( ! function_exists( 'toptour_finding_format_datetime' ) ) {
+	function toptour_finding_format_datetime( $value ) {
+		if ( empty( $value ) || '0000-00-00 00:00:00' === $value ) {
+			return '—';
+		}
+		$timestamp = strtotime( (string) $value );
+		if ( ! $timestamp ) {
+			return '—';
+		}
+		return date_i18n( 'd.m.Y H:i', $timestamp );
+	}
+}
+
+if ( ! function_exists( 'toptour_finding_translate_placeholder_text' ) ) {
+	function toptour_finding_translate_placeholder_text( $text ) {
+		$clean = sanitize_textarea_field( (string) $text );
+		$map = [
+			'Internal run placeholder created for lifecycle verification.' => 'Testovací záznam vytvorený na overenie životného cyklu úlohy.',
+			'Internal analysis placeholder for task #' => 'Testovacie analytické zistenie pre úlohu #',
+			'Internal placeholder analysis only. No external scraping or citation storage.' => 'Testovací analytický záznam. Externý zber ešte nie je zapnutý.',
+			'No automatic POI extraction in this phase.' => 'Automatická extrakcia bodov záujmu zatiaľ nie je aktívna.',
+			'Testovaci analyticky zaznam. Externy zber este nie je zapnuty.' => 'Testovací analytický záznam. Externý zber ešte nie je zapnutý.',
+			'Testovacie analyticke zistenie pre ulohu #' => 'Testovacie analytické zistenie pre úlohu #',
+			'Automaticka extrakcia bodov zaujmu zatial nie je aktivna.' => 'Automatická extrakcia bodov záujmu zatiaľ nie je aktívna.',
+			'Testovaci zaznam vytvoreny na overenie zivotneho cyklu ulohy.' => 'Testovací záznam vytvorený na overenie životného cyklu úlohy.',
+		];
+
+		if ( isset( $map[ $clean ] ) ) {
+			return $map[ $clean ];
+		}
+
+		if ( strpos( $clean, 'Internal analysis placeholder for task #' ) === 0 ) {
+			return str_replace( 'Internal analysis placeholder for task #', 'Testovacie analytické zistenie pre úlohu #', $clean );
+		}
+
+		if ( strpos( $clean, 'Testovacie analyticke zistenie pre ulohu #' ) === 0 ) {
+			return str_replace( 'Testovacie analyticke zistenie pre ulohu #', 'Testovacie analytické zistenie pre úlohu #', $clean );
+		}
+
+		return $clean;
+	}
+}
+
 ?>
 <div class="wrap">
 <h1>
@@ -416,58 +459,110 @@ $base_url    = admin_url( 'admin.php?page=toptour-references-findings' );
 <p><?php printf( esc_html__( 'Celkom: %d zistení', 'toptour-reference-finder' ), $total ); ?></p>
 
 <?php if ( $findings ) : ?>
-<table class="wp-list-table widefat fixed striped">
+<style>
+	.toptour-findings-table .column-finding {
+		width: 42%;
+	}
+	.toptour-findings-table .finding-title {
+		display: block;
+		font-weight: 600;
+		margin-bottom: 4px;
+		overflow-wrap: break-word;
+		word-break: normal;
+	}
+	.toptour-findings-table .finding-summary {
+		display: block;
+		margin-bottom: 4px;
+		color: #2c3338;
+		overflow-wrap: break-word;
+		word-break: normal;
+	}
+	.toptour-findings-table .finding-meta {
+		display: block;
+		color: #646970;
+		font-size: 12px;
+		overflow-wrap: break-word;
+		word-break: normal;
+	}
+	.toptour-findings-table .column-actions .row-actions {
+		position: static;
+		visibility: visible;
+		color: #50575e;
+	}
+</style>
+<table class="wp-list-table widefat fixed striped toptour-findings-table">
 <thead>
 <tr>
-	<th style="width:50px;"><?php esc_html_e( 'ID', 'toptour-reference-finder' ); ?></th>
-	<th><?php esc_html_e( 'Názov zistenia', 'toptour-reference-finder' ); ?></th>
-	<th style="width:100px;"><?php esc_html_e( 'Typ', 'toptour-reference-finder' ); ?></th>
-	<th style="width:100px;"><?php esc_html_e( 'Oblasť', 'toptour-reference-finder' ); ?></th>
-	<th style="width:120px;"><?php esc_html_e( 'Zdroj', 'toptour-reference-finder' ); ?></th>
-	<th style="width:120px;"><?php esc_html_e( 'Cieľ', 'toptour-reference-finder' ); ?></th>
-	<th style="width:120px;"><?php esc_html_e( 'Signal pattern', 'toptour-reference-finder' ); ?></th>
-	<th style="width:70px;"><?php esc_html_e( 'Sila', 'toptour-reference-finder' ); ?></th>
-	<th style="width:80px;"><?php esc_html_e( 'Opakovanie', 'toptour-reference-finder' ); ?></th>
-	<th style="width:80px;"><?php esc_html_e( 'Stav', 'toptour-reference-finder' ); ?></th>
-	<th style="width:140px;"><?php esc_html_e( 'Dôkaz', 'toptour-reference-finder' ); ?></th>
-	<th style="width:120px;"><?php esc_html_e( 'Vytvorené', 'toptour-reference-finder' ); ?></th>
-	<th style="width:100px;"><?php esc_html_e( 'Akcie', 'toptour-reference-finder' ); ?></th>
+	<th class="column-finding"><?php esc_html_e( 'Zistenie', 'toptour-reference-finder' ); ?></th>
+	<th style="width:120px;"><?php esc_html_e( 'Typ', 'toptour-reference-finder' ); ?></th>
+	<th style="width:140px;"><?php esc_html_e( 'Cieľ', 'toptour-reference-finder' ); ?></th>
+	<th style="width:140px;"><?php esc_html_e( 'Signál', 'toptour-reference-finder' ); ?></th>
+	<th style="width:120px;"><?php esc_html_e( 'Stav', 'toptour-reference-finder' ); ?></th>
+	<th style="width:140px;"><?php esc_html_e( 'Vytvorené', 'toptour-reference-finder' ); ?></th>
+	<th class="column-actions" style="width:120px;"><?php esc_html_e( 'Akcie', 'toptour-reference-finder' ); ?></th>
 </tr>
 </thead>
 <tbody>
 <?php foreach ( $findings as $row ) :
-	$source_label  = Toptour_Ref_Findings::get_source_label( (int) $row->source_id );
 	$target_label  = Toptour_Ref_Findings::get_target_label( $row->target_type, (int) $row->target_id );
 	$pattern_label = Toptour_Ref_Findings::get_signal_pattern_label( (int) $row->signal_pattern_id );
 	$edit_url      = add_query_arg( [ 'page' => 'toptour-references-findings', 'action' => 'edit', 'finding_id' => $row->id ], admin_url( 'admin.php' ) );
 	$archive_url   = wp_nonce_url( add_query_arg( [ 'page' => 'toptour-references-findings', 'action' => 'archive', 'finding_id' => $row->id ], admin_url( 'admin.php' ) ), 'toptour_archive_finding_' . $row->id );
+	$finding_summary = '';
+	if ( ! empty( $row->analysis_summary ) ) {
+		$finding_summary = (string) $row->analysis_summary;
+	} elseif ( ! empty( $row->evidence_excerpt ) ) {
+		$finding_summary = (string) $row->evidence_excerpt;
+	} elseif ( ! empty( $row->excerpt ) ) {
+		$finding_summary = (string) $row->excerpt;
+	}
+	$finding_summary = toptour_finding_translate_placeholder_text( $finding_summary );
+	if ( mb_strlen( $finding_summary ) > 180 ) {
+		$finding_summary = mb_substr( $finding_summary, 0, 180 ) . '…';
+	}
 
-	$evidence_cell = esc_html( Toptour_Ref_Labels::evidence_type_label( $row->evidence_type ) );
-	if ( ! empty( $row->evidence_url ) ) {
-		$evidence_cell .= ' <a href="' . esc_url( $row->evidence_url ) . '" target="_blank" rel="noopener noreferrer">URL</a>';
+	$meta_line = implode(
+		' · ',
+		array_filter(
+			[
+				Toptour_Ref_Labels::finding_type_label( $row->finding_type ),
+				$row->finding_area ? Toptour_Ref_Labels::finding_area_label( $row->finding_area ) : '',
+				Toptour_Ref_Labels::signal_strength_label( $row->signal_strength ),
+				Toptour_Ref_Labels::repetition_level_label( $row->repetition_level ),
+			]
+		)
+	);
+
+	$signal_label = '—';
+	if ( (int) $row->signal_pattern_id > 0 && $pattern_label !== '—' ) {
+		$signal_label = $pattern_label;
+	} elseif ( ! empty( $row->signal_strength ) || ! empty( $row->repetition_level ) ) {
+		$signal_label = Toptour_Ref_Labels::signal_strength_label( $row->signal_strength ) . ' · ' . Toptour_Ref_Labels::repetition_level_label( $row->repetition_level );
 	}
-	if ( ! empty( $row->evidence_excerpt ) ) {
-		$evidence_cell .= '<br><small>' . esc_html( mb_substr( $row->evidence_excerpt, 0, 80 ) ) . ( mb_strlen( $row->evidence_excerpt ) > 80 ? '…' : '' ) . '</small>';
-	}
+	$finding_title_display = toptour_finding_translate_placeholder_text( (string) $row->finding_title );
 ?>
 <tr>
-	<td><?php echo esc_html( $row->id ); ?></td>
-	<td><a href="<?php echo esc_url( $edit_url ); ?>"><?php echo esc_html( $row->finding_title ); ?></a></td>
-	<td><?php echo esc_html( Toptour_Ref_Labels::finding_type_label( $row->finding_type ) ); ?></td>
-	<td><?php echo esc_html( $row->finding_area ? Toptour_Ref_Labels::finding_area_label( $row->finding_area ) : '—' ); ?></td>
-	<td><?php echo esc_html( $source_label ); ?></td>
-	<td><?php echo esc_html( $target_label ); ?></td>
-	<td><?php echo esc_html( $pattern_label ); ?></td>
-	<td><?php echo esc_html( Toptour_Ref_Labels::signal_strength_label( $row->signal_strength ) ); ?></td>
-	<td><?php echo esc_html( Toptour_Ref_Labels::repetition_level_label( $row->repetition_level ) ); ?></td>
-	<td><?php echo esc_html( Toptour_Ref_Labels::verification_status_label( $row->verification_status ) ); ?></td>
-	<td><?php echo wp_kses( $evidence_cell, [ 'a' => [ 'href' => [], 'target' => [], 'rel' => [] ], 'br' => [], 'small' => [] ] ); ?></td>
-	<td><?php echo esc_html( $row->created_at ); ?></td>
-	<td>
-		<a href="<?php echo esc_url( $edit_url ); ?>"><?php esc_html_e( 'Upraviť', 'toptour-reference-finder' ); ?></a>
-		<?php if ( $row->verification_status !== 'archived' ) : ?>
-			| <a href="<?php echo esc_url( $archive_url ); ?>" onclick="return confirm('<?php esc_attr_e( 'Naozaj archivovať?', 'toptour-reference-finder' ); ?>')"><?php esc_html_e( 'Archivovať', 'toptour-reference-finder' ); ?></a>
+	<td class="column-finding">
+		<a class="finding-title" href="<?php echo esc_url( $edit_url ); ?>"><?php echo esc_html( $finding_title_display ); ?></a>
+		<?php if ( $finding_summary !== '' ) : ?>
+			<span class="finding-summary"><?php echo esc_html( $finding_summary ); ?></span>
 		<?php endif; ?>
+		<?php if ( $meta_line !== '' ) : ?>
+			<span class="finding-meta"><?php echo esc_html( $meta_line ); ?></span>
+		<?php endif; ?>
+	</td>
+	<td><?php echo esc_html( Toptour_Ref_Labels::finding_type_label( $row->finding_type ) ); ?></td>
+	<td><?php echo esc_html( $target_label ); ?></td>
+	<td><?php echo esc_html( $signal_label ); ?></td>
+	<td><?php echo esc_html( Toptour_Ref_Labels::verification_status_label( $row->verification_status ) ); ?></td>
+	<td><?php echo esc_html( toptour_finding_format_datetime( $row->created_at ) ); ?></td>
+	<td class="column-actions">
+		<div class="row-actions">
+			<span class="edit"><a href="<?php echo esc_url( $edit_url ); ?>"><?php esc_html_e( 'Upraviť', 'toptour-reference-finder' ); ?></a></span>
+		<?php if ( $row->verification_status !== 'archived' ) : ?>
+			 | <span class="trash"><a href="<?php echo esc_url( $archive_url ); ?>" onclick="return confirm('<?php esc_attr_e( 'Naozaj archivovať?', 'toptour-reference-finder' ); ?>')"><?php esc_html_e( 'Archivovať', 'toptour-reference-finder' ); ?></a></span>
+		<?php endif; ?>
+		</div>
 	</td>
 </tr>
 <?php endforeach; ?>

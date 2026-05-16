@@ -1,3 +1,34 @@
+## Decision: Reference analysis stores internal structured insight, not copied citations
+
+TOPTOUR References Finder neukladá cudzie referencie ako citácie.
+
+Plugin ukladá vlastné analytické zistenia, verejné metadáta zdroja, časové údaje referencie a časové snapshoty verejne prezentovaných parametrov ponúk.
+
+Referencia sa analyzuje vo vzťahu k ponuke, dodávateľovi, destinácii a bodom záujmu.
+
+Offer Snapshot zachytáva verejný stav ponuky v čase analýzy, pretože ceny, dostupnosť a podmienky sa môžu meniť.
+
+## Decision: Finder uses manual and automatic mode with safe-default manual
+
+References Finder používa režim `manual` / `automatic`.
+
+Predvolený režim je `manual`.
+
+Cron scheduler je napojený na Collection Tasks, Task Runs, Findings, Reference Analysis, Offer Snapshots a Task Events.
+
+Automatický režim zatiaľ nespúšťa neobmedzený externý scraping; spracovanie prebieha iba podľa bezpečne implementovaného interného mechanizmu bez externých HTTP volaní.
+
+## Decision: References Finder separates Task File, Runs, Findings and Events
+
+References Finder distinguishes four core entities for long-term collection workflows:
+
+- Collection Tasks are the primary working file for each assignment.
+- Task Runs store each individual execution of the task.
+- Findings store concrete discovered signals and references.
+- Task Events store the audit timeline of changes and manager decisions.
+
+This separation preserves history, enables repeatable execution and prevents silent overwrites of collection outcomes.
+
 ## Decision: Internal enum values remain stable English keys
 
 Internal enum values stored in plugin tables remain stable English keys.

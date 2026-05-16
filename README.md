@@ -2,7 +2,7 @@
 
 Internal TOPTOUR plugin for collecting real guest references, review findings, source links and photo evidence before any later evaluation logic.
 
-**Version:** 0.2.2
+**Version:** 0.2.3
 **Status:** Stabilizovaný interný plugin (MVP foundation)
 **Text Domain:** toptour-reference-finder  
 **Prefix:** Toptour_Ref_  
@@ -34,7 +34,7 @@ Plugin umožňuje:
 
 ## MVP rozsah
 
-Aktuálna verzia (0.2.2) obsahuje:
+Aktuálna verzia (0.2.3) obsahuje:
 
 - Admin moduly pre interný zber referencií (zariadenia, destinácie, kontakty, záujmy, POI, zdroje, zistenia, fotodôkazy, zberové úlohy)
 - Databázový installer a aktuálny základ schém pre interné entity

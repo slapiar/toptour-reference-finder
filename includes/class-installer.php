@@ -26,6 +26,10 @@ class Toptour_Ref_Installer {
 		// Store plugin version.
 		update_option( 'toptour_ref_version', TOPTOUR_REF_VERSION );
 
+		if ( ! get_option( 'toptour_ref_finder_mode', false ) ) {
+			update_option( 'toptour_ref_finder_mode', 'manual' );
+		}
+
 		// Create database tables and seed defaults.
 		self::create_tables();
 		self::seed_signal_patterns();
@@ -37,6 +41,8 @@ class Toptour_Ref_Installer {
 
 		// Set plugin activated flag.
 		update_option( 'toptour_ref_activated', true );
+
+		self::schedule_cron();
 
 		// Flush rewrite rules for future REST API routes.
 		flush_rewrite_rules();
@@ -137,6 +143,12 @@ class Toptour_Ref_Installer {
 		$tables[] = "CREATE TABLE {$wpdb->prefix}toptour_ref_collection_tasks (
 		id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
 		task_title varchar(255) NOT NULL,
+		destination_id bigint(20) unsigned DEFAULT 0,
+		supplier_id bigint(20) unsigned DEFAULT 0,
+		offer_id bigint(20) unsigned DEFAULT 0,
+		frequency varchar(50) DEFAULT 'manual',
+		next_run_at datetime NULL,
+		created_by bigint(20) unsigned DEFAULT 0,
 		target_type varchar(80) DEFAULT '',
 		target_id bigint(20) unsigned DEFAULT 0,
 		query_text longtext NULL,
@@ -152,6 +164,12 @@ class Toptour_Ref_Installer {
 		created_at datetime NOT NULL,
 		updated_at datetime NOT NULL,
 		PRIMARY KEY  (id),
+		KEY destination_id (destination_id),
+		KEY supplier_id (supplier_id),
+		KEY offer_id (offer_id),
+		KEY frequency (frequency),
+		KEY next_run_at (next_run_at),
+		KEY created_by (created_by),
 		KEY target_type (target_type),
 		KEY target_id (target_id),
 		KEY task_status (task_status),
@@ -520,6 +538,34 @@ class Toptour_Ref_Installer {
 		$tables[] = "CREATE TABLE {$wpdb->prefix}toptour_ref_findings (
 		id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
 		finding_title varchar(255) NOT NULL,
+		task_id bigint(20) unsigned DEFAULT 0,
+		run_id bigint(20) unsigned DEFAULT 0,
+		source_url text NULL,
+		source_title varchar(255) DEFAULT '',
+		source_type varchar(80) DEFAULT '',
+		excerpt longtext NULL,
+		detected_sentiment varchar(50) DEFAULT '',
+		review_published_at datetime NULL,
+		analysis_performed_at datetime NULL,
+		source_detected_at datetime NULL,
+		source_last_checked_at datetime NULL,
+		reference_language varchar(20) DEFAULT '',
+		reference_type varchar(80) DEFAULT 'other',
+		analysis_summary longtext NULL,
+		analysis_status varchar(50) DEFAULT 'pending',
+		confidence_score decimal(5,2) NULL,
+		destination_mapping_note text NULL,
+		poi_extraction_note text NULL,
+		offer_relation_note text NULL,
+		poi_candidate_id bigint(20) unsigned DEFAULT 0,
+		destination_id bigint(20) unsigned DEFAULT 0,
+		supplier_id bigint(20) unsigned DEFAULT 0,
+		offer_id bigint(20) unsigned DEFAULT 0,
+		hash varchar(191) DEFAULT '',
+		status varchar(50) DEFAULT 'new',
+		found_at datetime NULL,
+		reviewed_by bigint(20) unsigned DEFAULT 0,
+		reviewed_at datetime NULL,
 		source_id bigint(20) unsigned DEFAULT 0,
 		signal_pattern_id bigint(20) unsigned DEFAULT 0,
 		target_type varchar(80) DEFAULT 'general',
@@ -541,6 +587,26 @@ class Toptour_Ref_Installer {
 		created_at datetime NOT NULL,
 		updated_at datetime NOT NULL,
 		PRIMARY KEY  (id),
+		KEY task_id (task_id),
+		KEY run_id (run_id),
+		KEY source_type (source_type),
+		KEY detected_sentiment (detected_sentiment),
+		KEY review_published_at (review_published_at),
+		KEY analysis_performed_at (analysis_performed_at),
+		KEY source_detected_at (source_detected_at),
+		KEY source_last_checked_at (source_last_checked_at),
+		KEY reference_language (reference_language),
+		KEY reference_type (reference_type),
+		KEY analysis_status (analysis_status),
+		KEY poi_candidate_id (poi_candidate_id),
+		KEY destination_id (destination_id),
+		KEY supplier_id (supplier_id),
+		KEY offer_id (offer_id),
+		KEY hash (hash),
+		KEY status (status),
+		KEY found_at (found_at),
+		KEY reviewed_by (reviewed_by),
+		KEY reviewed_at (reviewed_at),
 		KEY source_id (source_id),
 		KEY signal_pattern_id (signal_pattern_id),
 		KEY target_type (target_type),
@@ -553,6 +619,93 @@ class Toptour_Ref_Installer {
 		KEY evidence_type (evidence_type),
 		KEY observed_at (observed_at),
 		KEY related_collection_task_id (related_collection_task_id)
+	) {$charset_collate};";
+
+		$tables[] = "CREATE TABLE {$wpdb->prefix}toptour_ref_offer_snapshots (
+		id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+		finding_id bigint(20) unsigned DEFAULT 0,
+		task_id bigint(20) unsigned DEFAULT 0,
+		run_id bigint(20) unsigned DEFAULT 0,
+		offer_id bigint(20) unsigned DEFAULT 0,
+		supplier_id bigint(20) unsigned DEFAULT 0,
+		destination_id bigint(20) unsigned DEFAULT 0,
+		source_url text NULL,
+		source_title varchar(255) DEFAULT '',
+		offer_name varchar(255) DEFAULT '',
+		offer_description_summary longtext NULL,
+		price_value decimal(12,2) NULL,
+		price_currency varchar(10) DEFAULT '',
+		price_note text NULL,
+		stay_duration varchar(120) DEFAULT '',
+		persons_min int(10) unsigned DEFAULT 0,
+		persons_max int(10) unsigned DEFAULT 0,
+		valid_from datetime NULL,
+		valid_to datetime NULL,
+		season varchar(120) DEFAULT '',
+		meal_plan varchar(120) DEFAULT '',
+		transport_type varchar(120) DEFAULT '',
+		accommodation_type varchar(120) DEFAULT '',
+		facility_category varchar(120) DEFAULT '',
+		included_services_summary longtext NULL,
+		excluded_services_summary longtext NULL,
+		availability_note text NULL,
+		booking_conditions_summary longtext NULL,
+		public_offer_published_at datetime NULL,
+		source_detected_at datetime NULL,
+		source_last_checked_at datetime NULL,
+		analysis_performed_at datetime NULL,
+		snapshot_hash varchar(191) DEFAULT '',
+		status varchar(50) DEFAULT 'new',
+		created_by bigint(20) unsigned DEFAULT 0,
+		created_at datetime NOT NULL,
+		updated_at datetime NOT NULL,
+		PRIMARY KEY  (id),
+		KEY finding_id (finding_id),
+		KEY task_id (task_id),
+		KEY run_id (run_id),
+		KEY offer_id (offer_id),
+		KEY supplier_id (supplier_id),
+		KEY destination_id (destination_id),
+		KEY analysis_performed_at (analysis_performed_at),
+		KEY snapshot_hash (snapshot_hash),
+		KEY status (status),
+		KEY created_by (created_by)
+	) {$charset_collate};";
+
+		$tables[] = "CREATE TABLE {$wpdb->prefix}toptour_ref_task_runs (
+		id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+		task_id bigint(20) unsigned NOT NULL,
+		started_at datetime NOT NULL,
+		finished_at datetime NULL,
+		status varchar(50) DEFAULT 'running',
+		found_count int(10) unsigned DEFAULT 0,
+		new_count int(10) unsigned DEFAULT 0,
+		duplicate_count int(10) unsigned DEFAULT 0,
+		error_count int(10) unsigned DEFAULT 0,
+		summary longtext NULL,
+		created_at datetime NOT NULL,
+		updated_at datetime NOT NULL,
+		PRIMARY KEY  (id),
+		KEY task_id (task_id),
+		KEY status (status),
+		KEY started_at (started_at),
+		KEY finished_at (finished_at)
+	) {$charset_collate};";
+
+		$tables[] = "CREATE TABLE {$wpdb->prefix}toptour_ref_task_events (
+		id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+		task_id bigint(20) unsigned NOT NULL,
+		event_type varchar(80) NOT NULL,
+		old_value longtext NULL,
+		new_value longtext NULL,
+		note longtext NULL,
+		created_by bigint(20) unsigned DEFAULT 0,
+		created_at datetime NOT NULL,
+		PRIMARY KEY  (id),
+		KEY task_id (task_id),
+		KEY event_type (event_type),
+		KEY created_by (created_by),
+		KEY created_at (created_at)
 	) {$charset_collate};";
 
 		$tables[] = "CREATE TABLE {$wpdb->prefix}toptour_ref_photo_evidence (
@@ -838,9 +991,26 @@ class Toptour_Ref_Installer {
 	 * @return void
 	 */
 	public static function deactivate() {
+		$timestamp = wp_next_scheduled( 'toptour_ref_process_collection_tasks' );
+		if ( $timestamp ) {
+			wp_unschedule_event( $timestamp, 'toptour_ref_process_collection_tasks' );
+		}
+		wp_clear_scheduled_hook( 'toptour_ref_process_collection_tasks' );
+
 		// Cleanup is minimal at this stage.
 		// Database tables are NOT dropped on deactivation.
 		// Capabilities remain for future reactivation.
 		flush_rewrite_rules();
+	}
+
+	/**
+	 * Ensure scheduler hook exists.
+	 *
+	 * @return void
+	 */
+	private static function schedule_cron() {
+		if ( ! wp_next_scheduled( 'toptour_ref_process_collection_tasks' ) ) {
+			wp_schedule_event( time() + 60, 'hourly', 'toptour_ref_process_collection_tasks' );
+		}
 	}
 }

@@ -38,6 +38,10 @@ class Toptour_Ref_Loader {
 		require_once TOPTOUR_REF_PLUGIN_DIR . 'includes/class-capabilities.php';
 		require_once TOPTOUR_REF_PLUGIN_DIR . 'includes/class-labels.php';
 		require_once TOPTOUR_REF_PLUGIN_DIR . 'includes/class-collection-tasks.php';
+		require_once TOPTOUR_REF_PLUGIN_DIR . 'includes/class-task-runs.php';
+		require_once TOPTOUR_REF_PLUGIN_DIR . 'includes/class-task-events.php';
+		require_once TOPTOUR_REF_PLUGIN_DIR . 'includes/class-offer-snapshots.php';
+		require_once TOPTOUR_REF_PLUGIN_DIR . 'includes/class-task-processor.php';
 		require_once TOPTOUR_REF_PLUGIN_DIR . 'includes/class-facilities.php';
 		require_once TOPTOUR_REF_PLUGIN_DIR . 'includes/class-destinations.php';
 		require_once TOPTOUR_REF_PLUGIN_DIR . 'includes/class-facility-destinations.php';
@@ -81,5 +85,8 @@ class Toptour_Ref_Loader {
 
 		// Register REST API routes.
 		add_action( 'rest_api_init', array( 'Toptour_Ref_REST_API', 'register_routes' ) );
+
+		// Scheduler hook for controlled automatic processing.
+		add_action( 'toptour_ref_process_collection_tasks', array( 'Toptour_Ref_Task_Processor', 'process_scheduled_tasks' ) );
 	}
 }
