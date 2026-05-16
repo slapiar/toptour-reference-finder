@@ -2,8 +2,8 @@
 
 Internal TOPTOUR plugin for collecting real guest references, review findings, source links and photo evidence before any later evaluation logic.
 
-**Version:** 0.1.0  
-**Status:** MVP (Minimum Viable Product) - Skeleton Only  
+**Version:** 0.2.2
+**Status:** Stabilizovaný interný plugin (MVP foundation)
 **Text Domain:** toptour-reference-finder  
 **Prefix:** Toptour_Ref_  
 **DB Prefix:** toptour_ref_
@@ -34,14 +34,13 @@ Plugin umožňuje:
 
 ## MVP rozsah
 
-Aktuálna verzia (0.1.0) obsahuje:
+Aktuálna verzia (0.2.2) obsahuje:
 
-- Admin menu štruktúra s placeholdermi pre budúce sekcie
-- Projektovú dokumentáciu a architektonické rozhodnutia
-- Loader a capabilities framework
-- Prázdny installer (bez tabuľiek)
-- Prázdnu REST API kostru s dokumentáciou plánovaných endpointov
-- Dashboard s popisom účelu pluginu
+- Admin moduly pre interný zber referencií (zariadenia, destinácie, kontakty, záujmy, POI, zdroje, zistenia, fotodôkazy, zberové úlohy)
+- Databázový installer a aktuálny základ schém pre interné entity
+- Discovery a collection workflow foundations (manual/admin-only)
+- Loader, capabilities framework a interné admin rozhranie
+- REST API kostru s dokumentáciou plánovaných endpointov
 
 ## Mimo rozsahu MVP
 
@@ -116,7 +115,7 @@ Po aktivácii pluginu sa v WordPress admin paneli objaví menu **TOPTOUR Referen
 - 📋 **Zber referencií** - Pracovný dashboard
 - ⚙️ **Nastavenia** - Konfigurácia (budúcnos)
 
-Všetky stránky sú zatiaľ placeholdery s notifikáciou o MVP stave.
+Sekcie sú interné a určené na riadený zber referencií bez verejného výstupu.
 
 ## Oprávnenia
 
@@ -208,5 +207,5 @@ Kontakt: development@toptour.sk (budúcnos)
 
 ---
 
-**Status:** 🔄 Aktívne v počiatočnej fáze  
+**Status:** 🔄 Aktívne interné používanie (stabilizačná fáza)
 **Posledná aktualizácia:** 2026-05-15

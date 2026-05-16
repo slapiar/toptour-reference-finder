@@ -35,15 +35,16 @@ if ( $action === 'archive' && $form_id > 0 ) {
 if ( isset( $_POST['toptour_photo_evidence_nonce'] ) ) {
 	check_admin_referer( 'toptour_save_photo_evidence', 'toptour_photo_evidence_nonce' );
 
-	$data       = Toptour_Ref_Photo_Evidence::sanitize_photo_evidence_data( $_POST );
+	$raw_post   = wp_unslash( $_POST );
+	$data       = Toptour_Ref_Photo_Evidence::sanitize_photo_evidence_data( $raw_post );
 	$validation = Toptour_Ref_Photo_Evidence::validate_photo_evidence_data( $data );
 
 	if ( $validation !== true ) {
 		$error     = implode( ' | ', $validation );
 		$show_form = true;
-		$form_id   = absint( $_POST['evidence_id'] ?? 0 );
+		$form_id   = absint( $raw_post['evidence_id'] ?? 0 );
 	} else {
-		$post_id = absint( $_POST['evidence_id'] ?? 0 );
+		$post_id = absint( $raw_post['evidence_id'] ?? 0 );
 		if ( $post_id > 0 ) {
 			$ok      = Toptour_Ref_Photo_Evidence::update_photo_evidence( $post_id, $data );
 			$message = $ok ? __( 'Fotodôkaz bol uložený.', 'toptour-reference-finder' ) : '';
@@ -89,7 +90,7 @@ if ( $show_form && $form_id > 0 ) {
 
 function toptour_photo_field( $field, $record, $default = '' ) {
 	if ( isset( $_POST['toptour_photo_evidence_nonce'] ) ) {
-		return sanitize_text_field( (string) ( $_POST[ $field ] ?? $default ) );
+		return sanitize_text_field( wp_unslash( (string) ( $_POST[ $field ] ?? $default ) ) );
 	}
 	if ( $record && isset( $record->$field ) ) {
 		return (string) $record->$field;
@@ -99,7 +100,7 @@ function toptour_photo_field( $field, $record, $default = '' ) {
 
 function toptour_photo_textarea( $field, $record, $default = '' ) {
 	if ( isset( $_POST['toptour_photo_evidence_nonce'] ) ) {
-		return sanitize_textarea_field( (string) ( $_POST[ $field ] ?? $default ) );
+		return sanitize_textarea_field( wp_unslash( (string) ( $_POST[ $field ] ?? $default ) ) );
 	}
 	if ( $record && isset( $record->$field ) ) {
 		return (string) $record->$field;

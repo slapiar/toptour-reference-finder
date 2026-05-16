@@ -2,8 +2,8 @@
 
 **Plugin Name:** TOPTOUR Reference Finder  
 **Slug:** toptour-reference-finder  
-**Version:** 0.1.0  
-**Status:** MVP Skeleton  
+**Version:** 0.2.2
+**Status:** Stabilization release (MVP foundations active)
 **Author:** TOPTOUR
 
 ## Architektonický popis
@@ -29,9 +29,9 @@ Plugin **NEPRIDÁVA**:
 - Marketing jazykové "vylepšovanie"
 - Lož o kvalite bez dôkazov
 
-## Dátový model (Budúcnos)
+## Dátový model (aktuálny základ)
 
-Budúce tabuľky (zatiaľ neimp implementované):
+Aktuálny databázový installer pripravuje základné tabuľky pre interný zber a discovery workflow:
 
 ### toptour_ref_facilities
 Ubytovacia zariadení a ostatné zariadenia.
@@ -156,7 +156,7 @@ Submenu:
 - Zber referencií
 - Nastavenia
 
-Všetky sekcie sú zatiaľ placeholdery s MVP notifikáciou.
+Sekcie sú určené pre interný zber, evidenciu a discovery workflow bez verejného výstupu.
 
 ## Bezpečnosť a oprávnenia
 

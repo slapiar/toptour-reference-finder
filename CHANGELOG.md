@@ -1,4 +1,10 @@
 
+## 0.2.2
+- Fixed release packaging to use a temporary staging directory.
+- Prevented build/dist artifacts from being tracked in Git.
+- Added/verified source recovery archive workflow.
+- Kept database schema version unchanged.
+
 ## 0.2.1
 - Added centralized admin label localization layer for internal enum values.
 - Added `Toptour_Ref_Labels` helper with grouped Slovak labels and safe fallback humanization.

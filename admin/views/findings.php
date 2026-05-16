@@ -35,7 +35,7 @@ if ( isset( $_GET['action'] ) && $_GET['action'] === 'archive' && isset( $_GET['
 if ( isset( $_POST['toptour_finding_nonce'] ) ) {
 	check_admin_referer( 'toptour_save_finding', 'toptour_finding_nonce' );
 
-	$raw  = $_POST;
+	$raw  = wp_unslash( $_POST );
 	$data = Toptour_Ref_Findings::sanitize_finding_data( $raw );
 	$validation = Toptour_Ref_Findings::validate_finding_data( $data );
 
@@ -87,7 +87,7 @@ if ( $show_form && $form_id > 0 ) {
 // ── Helper: decode POST re-population ─────────────────────────────────────────
 function toptour_finding_field( $field, $finding, $post_data, $default = '' ) {
 	if ( isset( $post_data['toptour_finding_nonce'] ) ) {
-		return sanitize_text_field( (string) ( $post_data[ $field ] ?? $default ) );
+		return sanitize_text_field( wp_unslash( (string) ( $post_data[ $field ] ?? $default ) ) );
 	}
 	if ( $finding && isset( $finding->$field ) ) {
 		return (string) $finding->$field;
@@ -97,7 +97,7 @@ function toptour_finding_field( $field, $finding, $post_data, $default = '' ) {
 
 function toptour_finding_textarea( $field, $finding, $post_data, $default = '' ) {
 	if ( isset( $post_data['toptour_finding_nonce'] ) ) {
-		return sanitize_textarea_field( (string) ( $post_data[ $field ] ?? $default ) );
+		return sanitize_textarea_field( wp_unslash( (string) ( $post_data[ $field ] ?? $default ) ) );
 	}
 	if ( $finding && isset( $finding->$field ) ) {
 		return (string) $finding->$field;

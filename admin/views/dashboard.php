@@ -12,6 +12,10 @@
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
+
+if ( ! Toptour_Ref_Capabilities::user_can_manage_references() ) {
+	wp_die( esc_html__( 'You do not have permission to access this page.', 'toptour-reference-finder' ) );
+}
 ?>
 
 <div class="wrap toptour-ref-dashboard">
