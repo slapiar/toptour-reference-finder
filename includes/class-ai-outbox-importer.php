@@ -333,13 +333,17 @@ class Toptour_Ref_AI_Outbox_Importer {
 	private static function import_structured_output( $task_id, $run_id, $payload, $structured ) {
 		$source_result = self::import_candidate_sources( $task_id, $structured['candidate_sources'] ?? [] );
 		$facility_result = self::import_candidate_facilities( $structured['candidate_facilities'] ?? [] );
+		$destination_result = self::import_candidate_destinations( $structured['candidate_destinations'] ?? [] );
+		$poi_result = self::import_candidate_points_of_interest( $structured['candidate_points_of_interest'] ?? [] );
+		$contact_result = self::import_candidate_contacts( $structured['candidate_contacts'] ?? [] );
+		$interest_result = self::import_candidate_interests( $structured['candidate_interests'] ?? [] );
 		$finding_result = self::import_pending_findings( $task_id, $run_id, $structured['pending_findings'] ?? [], $source_result['source_map'] ?? [] );
 		$photo_result = self::import_photo_candidates( $task_id, $structured['photo_evidence_candidates'] ?? [], $source_result['source_map'] ?? [], $finding_result['finding_map'] ?? [] );
 
-		$error_count = absint( $source_result['errors'] ?? 0 ) + absint( $facility_result['errors'] ?? 0 ) + absint( $finding_result['errors'] ?? 0 ) + absint( $photo_result['errors'] ?? 0 );
-		$new_count = absint( $source_result['created'] ?? 0 ) + absint( $facility_result['created'] ?? 0 ) + absint( $finding_result['created'] ?? 0 ) + absint( $photo_result['created'] ?? 0 );
-		$duplicate_count = absint( $source_result['updated'] ?? 0 ) + absint( $facility_result['updated'] ?? 0 ) + absint( $finding_result['updated'] ?? 0 ) + absint( $photo_result['updated'] ?? 0 );
-		$found_count = count( (array) ( $structured['candidate_sources'] ?? [] ) ) + count( (array) ( $structured['candidate_facilities'] ?? [] ) ) + count( (array) ( $structured['pending_findings'] ?? [] ) ) + count( (array) ( $structured['photo_evidence_candidates'] ?? [] ) );
+		$error_count = absint( $source_result['errors'] ?? 0 ) + absint( $facility_result['errors'] ?? 0 ) + absint( $destination_result['errors'] ?? 0 ) + absint( $poi_result['errors'] ?? 0 ) + absint( $contact_result['errors'] ?? 0 ) + absint( $interest_result['errors'] ?? 0 ) + absint( $finding_result['errors'] ?? 0 ) + absint( $photo_result['errors'] ?? 0 );
+		$new_count = absint( $source_result['created'] ?? 0 ) + absint( $facility_result['created'] ?? 0 ) + absint( $destination_result['created'] ?? 0 ) + absint( $poi_result['created'] ?? 0 ) + absint( $contact_result['created'] ?? 0 ) + absint( $interest_result['created'] ?? 0 ) + absint( $finding_result['created'] ?? 0 ) + absint( $photo_result['created'] ?? 0 );
+		$duplicate_count = absint( $source_result['updated'] ?? 0 ) + absint( $facility_result['updated'] ?? 0 ) + absint( $destination_result['updated'] ?? 0 ) + absint( $poi_result['updated'] ?? 0 ) + absint( $contact_result['updated'] ?? 0 ) + absint( $interest_result['updated'] ?? 0 ) + absint( $finding_result['updated'] ?? 0 ) + absint( $photo_result['updated'] ?? 0 );
+		$found_count = count( (array) ( $structured['candidate_sources'] ?? [] ) ) + count( (array) ( $structured['candidate_facilities'] ?? [] ) ) + count( (array) ( $structured['candidate_destinations'] ?? [] ) ) + count( (array) ( $structured['candidate_points_of_interest'] ?? [] ) ) + count( (array) ( $structured['candidate_contacts'] ?? [] ) ) + count( (array) ( $structured['candidate_interests'] ?? [] ) ) + count( (array) ( $structured['pending_findings'] ?? [] ) ) + count( (array) ( $structured['photo_evidence_candidates'] ?? [] ) );
 
 		if ( $new_count <= 0 && $duplicate_count <= 0 && $error_count > 0 ) {
 			return [
@@ -376,6 +380,26 @@ class Toptour_Ref_AI_Outbox_Importer {
 					'created' => absint( $facility_result['created'] ?? 0 ),
 					'updated' => absint( $facility_result['updated'] ?? 0 ),
 					'errors' => absint( $facility_result['errors'] ?? 0 ),
+				],
+				'destinations' => [
+					'created' => absint( $destination_result['created'] ?? 0 ),
+					'updated' => absint( $destination_result['updated'] ?? 0 ),
+					'errors' => absint( $destination_result['errors'] ?? 0 ),
+				],
+				'points_of_interest' => [
+					'created' => absint( $poi_result['created'] ?? 0 ),
+					'updated' => absint( $poi_result['updated'] ?? 0 ),
+					'errors' => absint( $poi_result['errors'] ?? 0 ),
+				],
+				'contacts' => [
+					'created' => absint( $contact_result['created'] ?? 0 ),
+					'updated' => absint( $contact_result['updated'] ?? 0 ),
+					'errors' => absint( $contact_result['errors'] ?? 0 ),
+				],
+				'interests' => [
+					'created' => absint( $interest_result['created'] ?? 0 ),
+					'updated' => absint( $interest_result['updated'] ?? 0 ),
+					'errors' => absint( $interest_result['errors'] ?? 0 ),
 				],
 				'findings' => [
 					'created' => absint( $finding_result['created'] ?? 0 ),
@@ -414,7 +438,7 @@ class Toptour_Ref_AI_Outbox_Importer {
 		$module_metrics = is_array( $row['module_metrics'] ?? null ) ? $row['module_metrics'] : [];
 
 		$normalized_modules = [];
-		foreach ( [ 'sources', 'facilities', 'findings', 'photo_evidence' ] as $module_key ) {
+		foreach ( [ 'sources', 'facilities', 'destinations', 'points_of_interest', 'contacts', 'interests', 'findings', 'photo_evidence' ] as $module_key ) {
 			$module_row = is_array( $module_metrics[ $module_key ] ?? null ) ? $module_metrics[ $module_key ] : [];
 			$normalized_modules[ $module_key ] = [
 				'created' => absint( $module_row['created'] ?? 0 ),
@@ -599,6 +623,295 @@ class Toptour_Ref_AI_Outbox_Importer {
 			}
 
 			$new_id = Toptour_Ref_Facilities::create_facility( $data );
+			if ( $new_id ) {
+				$result['created']++;
+			} else {
+				$result['errors']++;
+			}
+		}
+
+		return $result;
+	}
+
+	private static function import_candidate_destinations( $rows ) {
+		if ( ! is_array( $rows ) ) {
+			$rows = [];
+		}
+
+		$result = [
+			'created' => 0,
+			'updated' => 0,
+			'errors' => 0,
+		];
+
+		foreach ( $rows as $row ) {
+			if ( ! is_array( $row ) ) {
+				$result['errors']++;
+				continue;
+			}
+
+			$destination_id = absint( $row['destination_id'] ?? 0 );
+			$name = sanitize_text_field( (string) ( $row['name'] ?? '' ) );
+			if ( $destination_id <= 0 && '' === $name ) {
+				$result['errors']++;
+				continue;
+			}
+
+			$input = [
+				'name' => $name,
+				'slug' => sanitize_title( (string) ( $row['slug'] ?? '' ) ),
+				'country' => sanitize_text_field( (string) ( $row['country'] ?? '' ) ),
+				'region' => sanitize_text_field( (string) ( $row['region'] ?? '' ) ),
+				'destination_type' => sanitize_key( (string) ( $row['destination_type'] ?? '' ) ),
+				'seasonality' => sanitize_text_field( (string) ( $row['seasonality'] ?? '' ) ),
+				'description' => sanitize_textarea_field( (string) ( $row['description'] ?? '' ) ),
+				'notes' => self::append_note( (string) ( $row['notes'] ?? '' ), 'AI destination candidate: ' . sanitize_text_field( (string) ( $row['status'] ?? 'requires_review' ) ) ),
+				'status' => 'draft',
+			];
+
+			$data = Toptour_Ref_Destinations::sanitize_destination_data( $input );
+			$validation = Toptour_Ref_Destinations::validate_destination_data( $data );
+			if ( true !== $validation ) {
+				$result['errors']++;
+				continue;
+			}
+
+			$existing_id = 0;
+			if ( $destination_id > 0 && Toptour_Ref_Destinations::get_destination( $destination_id ) ) {
+				$existing_id = $destination_id;
+			} else {
+				$existing_id = self::find_existing_destination_id( $data['name'], $data['country'], $data['region'], $data['slug'] );
+			}
+
+			if ( $existing_id > 0 ) {
+				$ok = Toptour_Ref_Destinations::update_destination( $existing_id, $data );
+				if ( $ok ) {
+					$result['updated']++;
+				} else {
+					$result['errors']++;
+				}
+				continue;
+			}
+
+			$new_id = Toptour_Ref_Destinations::create_destination( $data );
+			if ( $new_id ) {
+				$result['created']++;
+			} else {
+				$result['errors']++;
+			}
+		}
+
+		return $result;
+	}
+
+	private static function import_candidate_points_of_interest( $rows ) {
+		if ( ! is_array( $rows ) ) {
+			$rows = [];
+		}
+
+		$result = [
+			'created' => 0,
+			'updated' => 0,
+			'errors' => 0,
+		];
+
+		foreach ( $rows as $row ) {
+			if ( ! is_array( $row ) ) {
+				$result['errors']++;
+				continue;
+			}
+
+			$poi_id = absint( $row['poi_id'] ?? 0 );
+			$name = sanitize_text_field( (string) ( $row['name'] ?? '' ) );
+			if ( $poi_id <= 0 && '' === $name ) {
+				$result['errors']++;
+				continue;
+			}
+
+			$input = [
+				'destination_id' => absint( $row['destination_id'] ?? 0 ),
+				'facility_id' => absint( $row['facility_id'] ?? 0 ),
+				'name' => $name,
+				'slug' => sanitize_title( (string) ( $row['slug'] ?? '' ) ),
+				'poi_type' => sanitize_key( (string) ( $row['poi_type'] ?? 'other' ) ),
+				'country' => sanitize_text_field( (string) ( $row['country'] ?? '' ) ),
+				'region' => sanitize_text_field( (string) ( $row['region'] ?? '' ) ),
+				'city' => sanitize_text_field( (string) ( $row['city'] ?? '' ) ),
+				'address' => sanitize_textarea_field( (string) ( $row['address'] ?? '' ) ),
+				'latitude' => sanitize_text_field( (string) ( $row['latitude'] ?? '' ) ),
+				'longitude' => sanitize_text_field( (string) ( $row['longitude'] ?? '' ) ),
+				'description' => sanitize_textarea_field( (string) ( $row['description'] ?? '' ) ),
+				'status' => 'draft',
+				'notes' => self::append_note( (string) ( $row['notes'] ?? '' ), 'AI POI candidate: ' . sanitize_text_field( (string) ( $row['status'] ?? 'requires_review' ) ) ),
+			];
+
+			$data = Toptour_Ref_Points_Of_Interest::sanitize_point_data( $input );
+			$validation = Toptour_Ref_Points_Of_Interest::validate_point_data( $data );
+			if ( true !== $validation ) {
+				$result['errors']++;
+				continue;
+			}
+
+			$existing_id = 0;
+			if ( $poi_id > 0 && Toptour_Ref_Points_Of_Interest::get_point( $poi_id ) ) {
+				$existing_id = $poi_id;
+			} else {
+				$existing_id = self::find_existing_poi_id( $data['name'], $data['destination_id'], $data['facility_id'], $data['slug'] );
+			}
+
+			if ( $existing_id > 0 ) {
+				$ok = Toptour_Ref_Points_Of_Interest::update_point( $existing_id, $data );
+				if ( $ok ) {
+					$result['updated']++;
+				} else {
+					$result['errors']++;
+				}
+				continue;
+			}
+
+			$new_id = Toptour_Ref_Points_Of_Interest::create_point( $data );
+			if ( $new_id ) {
+				$result['created']++;
+			} else {
+				$result['errors']++;
+			}
+		}
+
+		return $result;
+	}
+
+	private static function import_candidate_contacts( $rows ) {
+		if ( ! is_array( $rows ) ) {
+			$rows = [];
+		}
+
+		$result = [
+			'created' => 0,
+			'updated' => 0,
+			'errors' => 0,
+		];
+
+		foreach ( $rows as $row ) {
+			if ( ! is_array( $row ) ) {
+				$result['errors']++;
+				continue;
+			}
+
+			$contact_id = absint( $row['contact_id'] ?? 0 );
+			$display_name = sanitize_text_field( (string) ( $row['display_name'] ?? '' ) );
+			if ( $contact_id <= 0 && '' === $display_name ) {
+				$result['errors']++;
+				continue;
+			}
+
+			$input = [
+				'contact_type' => sanitize_key( (string) ( $row['contact_type'] ?? 'person' ) ),
+				'display_name' => $display_name,
+				'first_name' => sanitize_text_field( (string) ( $row['first_name'] ?? '' ) ),
+				'last_name' => sanitize_text_field( (string) ( $row['last_name'] ?? '' ) ),
+				'organization_name' => sanitize_text_field( (string) ( $row['organization_name'] ?? '' ) ),
+				'email' => sanitize_email( (string) ( $row['email'] ?? '' ) ),
+				'phone' => sanitize_text_field( (string) ( $row['phone'] ?? '' ) ),
+				'website_url' => esc_url_raw( (string) ( $row['website_url'] ?? '' ) ),
+				'country' => sanitize_text_field( (string) ( $row['country'] ?? '' ) ),
+				'region' => sanitize_text_field( (string) ( $row['region'] ?? '' ) ),
+				'city' => sanitize_text_field( (string) ( $row['city'] ?? '' ) ),
+				'address' => sanitize_textarea_field( (string) ( $row['address'] ?? '' ) ),
+				'preferred_language' => sanitize_text_field( (string) ( $row['preferred_language'] ?? '' ) ),
+				'status' => 'draft',
+				'trust_level' => sanitize_key( (string) ( $row['trust_level'] ?? 'unknown' ) ),
+				'notes' => self::append_note( (string) ( $row['notes'] ?? '' ), 'AI contact candidate: ' . sanitize_text_field( (string) ( $row['status'] ?? 'requires_review' ) ) ),
+			];
+
+			$data = Toptour_Ref_Contacts::sanitize_contact_data( $input );
+			$validation = Toptour_Ref_Contacts::validate_contact_data( $data, $input );
+			if ( true !== $validation ) {
+				$result['errors']++;
+				continue;
+			}
+
+			$existing_id = 0;
+			if ( $contact_id > 0 && Toptour_Ref_Contacts::get_contact( $contact_id ) ) {
+				$existing_id = $contact_id;
+			} else {
+				$existing_id = self::find_existing_contact_id( $data['display_name'], $data['email'], $data['phone'] );
+			}
+
+			if ( $existing_id > 0 ) {
+				$ok = Toptour_Ref_Contacts::update_contact( $existing_id, $data );
+				if ( $ok ) {
+					$result['updated']++;
+				} else {
+					$result['errors']++;
+				}
+				continue;
+			}
+
+			$new_id = Toptour_Ref_Contacts::create_contact( $data );
+			if ( $new_id ) {
+				$result['created']++;
+			} else {
+				$result['errors']++;
+			}
+		}
+
+		return $result;
+	}
+
+	private static function import_candidate_interests( $rows ) {
+		if ( ! is_array( $rows ) ) {
+			$rows = [];
+		}
+
+		$result = [
+			'created' => 0,
+			'updated' => 0,
+			'errors' => 0,
+		];
+
+		foreach ( $rows as $row ) {
+			if ( ! is_array( $row ) ) {
+				$result['errors']++;
+				continue;
+			}
+
+			$name = sanitize_text_field( (string) ( $row['name'] ?? '' ) );
+			$interest_key = sanitize_title( (string) ( $row['interest_key'] ?? '' ) );
+			if ( '' === $interest_key ) {
+				$interest_key = sanitize_title( $name );
+			}
+			if ( '' === $interest_key || '' === $name ) {
+				$result['errors']++;
+				continue;
+			}
+
+			$input = [
+				'interest_key' => $interest_key,
+				'name' => $name,
+				'description' => sanitize_textarea_field( (string) ( $row['description'] ?? '' ) ),
+				'interest_type' => sanitize_key( (string) ( $row['interest_type'] ?? 'other' ) ),
+				'is_active' => isset( $row['is_active'] ) ? ( ! empty( $row['is_active'] ) ? 1 : 0 ) : 1,
+			];
+
+			$data = Toptour_Ref_Interests::sanitize_interest_data( $input );
+			$existing = Toptour_Ref_Interests::get_interest_by_key( $data['interest_key'] );
+			$validation = Toptour_Ref_Interests::validate_interest_data( $data, $existing ? (int) $existing->id : 0 );
+			if ( true !== $validation ) {
+				$result['errors']++;
+				continue;
+			}
+
+			if ( $existing ) {
+				$ok = Toptour_Ref_Interests::update_interest( (int) $existing->id, $data );
+				if ( $ok ) {
+					$result['updated']++;
+				} else {
+					$result['errors']++;
+				}
+				continue;
+			}
+
+			$new_id = Toptour_Ref_Interests::create_interest( $data );
 			if ( $new_id ) {
 				$result['created']++;
 			} else {
@@ -874,6 +1187,100 @@ class Toptour_Ref_AI_Outbox_Importer {
 		global $wpdb;
 		$table = Toptour_Ref_Reference_Sources::get_table_name();
 		$id = $wpdb->get_var( $wpdb->prepare( "SELECT id FROM $table WHERE source_url = %s ORDER BY id DESC LIMIT 1", $url ) );
+		return absint( $id );
+	}
+
+	private static function find_existing_destination_id( $name, $country, $region, $slug ) {
+		$name = sanitize_text_field( (string) $name );
+		$country = sanitize_text_field( (string) $country );
+		$region = sanitize_text_field( (string) $region );
+		$slug = sanitize_title( (string) $slug );
+
+		if ( '' === $name && '' === $slug ) {
+			return 0;
+		}
+
+		global $wpdb;
+		$table = Toptour_Ref_Destinations::get_table_name();
+
+		if ( '' !== $slug ) {
+			$id = $wpdb->get_var( $wpdb->prepare( "SELECT id FROM $table WHERE slug = %s ORDER BY id DESC LIMIT 1", $slug ) );
+			if ( absint( $id ) > 0 ) {
+				return absint( $id );
+			}
+		}
+
+		$id = $wpdb->get_var(
+			$wpdb->prepare(
+				"SELECT id FROM $table WHERE name = %s AND country = %s AND region = %s ORDER BY id DESC LIMIT 1",
+				$name,
+				$country,
+				$region
+			)
+		);
+
+		return absint( $id );
+	}
+
+	private static function find_existing_poi_id( $name, $destination_id, $facility_id, $slug ) {
+		$name = sanitize_text_field( (string) $name );
+		$destination_id = absint( $destination_id );
+		$facility_id = absint( $facility_id );
+		$slug = sanitize_title( (string) $slug );
+
+		if ( '' === $name && '' === $slug ) {
+			return 0;
+		}
+
+		global $wpdb;
+		$table = Toptour_Ref_Points_Of_Interest::get_table_name();
+
+		if ( '' !== $slug ) {
+			$id = $wpdb->get_var( $wpdb->prepare( "SELECT id FROM $table WHERE slug = %s ORDER BY id DESC LIMIT 1", $slug ) );
+			if ( absint( $id ) > 0 ) {
+				return absint( $id );
+			}
+		}
+
+		$id = $wpdb->get_var(
+			$wpdb->prepare(
+				"SELECT id FROM $table WHERE name = %s AND destination_id = %d AND facility_id = %d ORDER BY id DESC LIMIT 1",
+				$name,
+				$destination_id,
+				$facility_id
+			)
+		);
+
+		return absint( $id );
+	}
+
+	private static function find_existing_contact_id( $display_name, $email, $phone ) {
+		$display_name = sanitize_text_field( (string) $display_name );
+		$email = sanitize_email( (string) $email );
+		$phone = sanitize_text_field( (string) $phone );
+
+		if ( '' === $display_name && '' === $email && '' === $phone ) {
+			return 0;
+		}
+
+		global $wpdb;
+		$table = Toptour_Ref_Contacts::get_table_name();
+
+		if ( '' !== $email ) {
+			$id = $wpdb->get_var( $wpdb->prepare( "SELECT id FROM $table WHERE email = %s ORDER BY id DESC LIMIT 1", $email ) );
+			if ( absint( $id ) > 0 ) {
+				return absint( $id );
+			}
+		}
+
+		$id = $wpdb->get_var(
+			$wpdb->prepare(
+				"SELECT id FROM $table WHERE display_name = %s AND phone = %s ORDER BY id DESC LIMIT 1",
+				$display_name,
+				$phone
+			)
+		);
+
 		return absint( $id );
 	}
 

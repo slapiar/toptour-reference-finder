@@ -191,6 +191,10 @@ Optional top-level fields:
         "follow_up_question",
         "candidate_sources",
         "candidate_facilities",
+        "candidate_destinations",
+        "candidate_points_of_interest",
+        "candidate_contacts",
+        "candidate_interests",
         "pending_findings",
         "photo_evidence_candidates",
         "import_notes"
@@ -244,6 +248,88 @@ Optional top-level fields:
               "task_id": { "type": "integer", "minimum": 0 },
               "facility_id": { "type": "integer", "minimum": 0 },
               "destination_id": { "type": "integer", "minimum": 0 },
+              "notes": { "type": "string" }
+            }
+          }
+        },
+        "candidate_destinations": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": true,
+            "properties": {
+              "name": { "type": "string" },
+              "country": { "type": "string" },
+              "region": { "type": "string" },
+              "destination_type": { "type": "string" },
+              "status": {
+                "type": "string",
+                "enum": ["candidate", "pending_review", "needs_verification"]
+              },
+              "task_id": { "type": "integer", "minimum": 0 },
+              "destination_id": { "type": "integer", "minimum": 0 },
+              "notes": { "type": "string" }
+            }
+          }
+        },
+        "candidate_points_of_interest": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": true,
+            "properties": {
+              "name": { "type": "string" },
+              "poi_type": { "type": "string" },
+              "destination_id": { "type": "integer", "minimum": 0 },
+              "facility_id": { "type": "integer", "minimum": 0 },
+              "city": { "type": "string" },
+              "address": { "type": "string" },
+              "status": {
+                "type": "string",
+                "enum": ["candidate", "pending_review", "needs_verification"]
+              },
+              "task_id": { "type": "integer", "minimum": 0 },
+              "poi_id": { "type": "integer", "minimum": 0 },
+              "notes": { "type": "string" }
+            }
+          }
+        },
+        "candidate_contacts": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": true,
+            "properties": {
+              "display_name": { "type": "string" },
+              "contact_type": { "type": "string" },
+              "email": { "type": "string" },
+              "phone": { "type": "string" },
+              "website_url": { "type": "string" },
+              "status": {
+                "type": "string",
+                "enum": ["candidate", "pending_review", "needs_verification"]
+              },
+              "task_id": { "type": "integer", "minimum": 0 },
+              "contact_id": { "type": "integer", "minimum": 0 },
+              "notes": { "type": "string" }
+            }
+          }
+        },
+        "candidate_interests": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": true,
+            "properties": {
+              "name": { "type": "string" },
+              "interest_key": { "type": "string" },
+              "interest_type": { "type": "string" },
+              "is_active": { "type": "boolean" },
+              "status": {
+                "type": "string",
+                "enum": ["candidate", "pending_review", "needs_verification"]
+              },
+              "task_id": { "type": "integer", "minimum": 0 },
               "notes": { "type": "string" }
             }
           }
@@ -336,6 +422,47 @@ Optional top-level fields:
         "notes": "Requires manual entity matching."
       }
     ],
+    "candidate_destinations": [
+      {
+        "name": "Sardinia",
+        "country": "Italy",
+        "region": "Sardegna",
+        "destination_type": "sea",
+        "status": "pending_review",
+        "task_id": 123
+      }
+    ],
+    "candidate_points_of_interest": [
+      {
+        "name": "Spiaggia La Pelosa",
+        "poi_type": "natural_site",
+        "destination_id": 0,
+        "facility_id": 0,
+        "city": "Stintino",
+        "status": "pending_review",
+        "task_id": 123
+      }
+    ],
+    "candidate_contacts": [
+      {
+        "display_name": "Local Sardinia Host",
+        "contact_type": "person",
+        "email": "",
+        "phone": "",
+        "status": "pending_review",
+        "task_id": 123
+      }
+    ],
+    "candidate_interests": [
+      {
+        "name": "Sea holidays",
+        "interest_key": "sea-holidays",
+        "interest_type": "tourism",
+        "is_active": true,
+        "status": "pending_review",
+        "task_id": 123
+      }
+    ],
     "pending_findings": [
       {
         "category": "hidden_beach_fees",
@@ -379,6 +506,10 @@ Optional top-level fields:
     "follow_up_question": "Doplň prosím kontext a skús otázku znova.",
     "candidate_sources": [],
     "candidate_facilities": [],
+    "candidate_destinations": [],
+    "candidate_points_of_interest": [],
+    "candidate_contacts": [],
+    "candidate_interests": [],
     "pending_findings": [],
     "photo_evidence_candidates": [],
     "import_notes": ["openai_error"]
@@ -409,6 +540,10 @@ Concurrency rules:
 Dedupe rules in importer:
 - Findings use deterministic hash dedupe (task + source URL + summary + target).
 - Photo evidence candidates are deduped by `(related_collection_task_id, source_id, evidence_url)`.
+- Destinations dedupe by slug, then by `(name + country + region)`.
+- Points of interest dedupe by slug, then by `(name + destination_id + facility_id)`.
+- Contacts dedupe by email, then by `(display_name + phone)`.
+- Interests dedupe by `interest_key`.
 
 ## Importer Expectations (Next Layer)
 

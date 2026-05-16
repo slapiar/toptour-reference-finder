@@ -465,7 +465,7 @@ if ( $wpdb->get_var( $wpdb->prepare( "SHOW TABLES LIKE %s", $signal_table ) ) ) 
 						<td>
 							<?php
 							$mm = is_array( $report_row['module_metrics'] ?? null ) ? $report_row['module_metrics'] : [];
-							foreach ( [ 'sources', 'facilities', 'findings', 'photo_evidence' ] as $mm_key ) {
+							foreach ( [ 'sources', 'facilities', 'destinations', 'points_of_interest', 'contacts', 'interests', 'findings', 'photo_evidence' ] as $mm_key ) {
 								$mr = is_array( $mm[ $mm_key ] ?? null ) ? $mm[ $mm_key ] : [];
 								echo esc_html( $mm_key . ': c=' . absint( $mr['created'] ?? 0 ) . ' u=' . absint( $mr['updated'] ?? 0 ) . ' e=' . absint( $mr['errors'] ?? 0 ) );
 								echo '<br>';

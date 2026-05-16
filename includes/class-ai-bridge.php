@@ -375,6 +375,18 @@ class Toptour_Ref_AI_Bridge {
 			'candidate_facilities' => [
 				[ 'name' => 'string', 'status' => 'possible_match|possible_duplicate|requires_review' ],
 			],
+			'candidate_destinations' => [
+				[ 'name' => 'string', 'country' => 'string', 'region' => 'string', 'destination_type' => 'string', 'status' => 'candidate|pending_review' ],
+			],
+			'candidate_points_of_interest' => [
+				[ 'name' => 'string', 'poi_type' => 'string', 'destination_id' => 'number', 'facility_id' => 'number', 'status' => 'candidate|pending_review' ],
+			],
+			'candidate_contacts' => [
+				[ 'display_name' => 'string', 'contact_type' => 'person|organization|group', 'email' => 'string', 'phone' => 'string', 'status' => 'candidate|pending_review' ],
+			],
+			'candidate_interests' => [
+				[ 'name' => 'string', 'interest_key' => 'string', 'interest_type' => 'string', 'is_active' => 'boolean', 'status' => 'candidate|pending_review' ],
+			],
 			'pending_findings' => [
 				[ 'category' => 'string', 'summary' => 'string', 'status' => 'pending_review|candidate|needs_verification' ],
 			],
@@ -464,6 +476,10 @@ class Toptour_Ref_AI_Bridge {
 				'follow_up_question' => 'Prosím zopakuj otázku s presnejším kontextom.',
 				'candidate_sources' => [],
 				'candidate_facilities' => [],
+				'candidate_destinations' => [],
+				'candidate_points_of_interest' => [],
+				'candidate_contacts' => [],
+				'candidate_interests' => [],
 				'pending_findings' => [],
 				'photo_evidence_candidates' => [],
 				'import_notes' => [ 'invalid_ai_json' ],
@@ -477,6 +493,10 @@ class Toptour_Ref_AI_Bridge {
 			'follow_up_question' => sanitize_textarea_field( (string) ( $decoded['follow_up_question'] ?? '' ) ),
 			'candidate_sources' => is_array( $decoded['candidate_sources'] ?? null ) ? $decoded['candidate_sources'] : [],
 			'candidate_facilities' => is_array( $decoded['candidate_facilities'] ?? null ) ? $decoded['candidate_facilities'] : [],
+			'candidate_destinations' => is_array( $decoded['candidate_destinations'] ?? null ) ? $decoded['candidate_destinations'] : [],
+			'candidate_points_of_interest' => is_array( $decoded['candidate_points_of_interest'] ?? null ) ? $decoded['candidate_points_of_interest'] : [],
+			'candidate_contacts' => is_array( $decoded['candidate_contacts'] ?? null ) ? $decoded['candidate_contacts'] : [],
+			'candidate_interests' => is_array( $decoded['candidate_interests'] ?? null ) ? $decoded['candidate_interests'] : [],
 			'pending_findings' => is_array( $decoded['pending_findings'] ?? null ) ? $decoded['pending_findings'] : [],
 			'photo_evidence_candidates' => is_array( $decoded['photo_evidence_candidates'] ?? null ) ? $decoded['photo_evidence_candidates'] : [],
 			'import_notes' => is_array( $decoded['import_notes'] ?? null ) ? $decoded['import_notes'] : [],
@@ -501,6 +521,10 @@ class Toptour_Ref_AI_Bridge {
 				'follow_up_question' => 'Doplň prosím kontext a skús otázku znova.',
 				'candidate_sources' => [],
 				'candidate_facilities' => [],
+				'candidate_destinations' => [],
+				'candidate_points_of_interest' => [],
+				'candidate_contacts' => [],
+				'candidate_interests' => [],
 				'pending_findings' => [],
 				'photo_evidence_candidates' => [],
 				'import_notes' => [ 'openai_error' ],
