@@ -651,8 +651,11 @@ class Toptour_Ref_AI_Outbox_Importer {
 			}
 
 			$source_url = $source && ! empty( $source->source_url ) ? (string) $source->source_url : '';
-			$dedupe_hash = md5( implode( '|', [ absint( $task_id ), $source_url, $summary, $target_type, $target_id ] ) );
+			$dedupe_hash = self::build_finding_dedupe_hash( $task_id, $source_url, $summary, $target_type, $target_id );
 			$existing_finding_id = self::find_existing_finding_id_by_hash( $dedupe_hash );
+			if ( $existing_finding_id <= 0 ) {
+				$existing_finding_id = self::find_existing_finding_id_by_signature( $task_id, $source_url, $summary, $target_type, $target_id );
+			}
 			if ( $existing_finding_id > 0 ) {
 				$result['updated']++;
 				if ( $legacy_source_id > 0 ) {
@@ -884,6 +887,106 @@ class Toptour_Ref_AI_Outbox_Importer {
 		$table = Toptour_Ref_Findings::get_table_name();
 		$id = $wpdb->get_var( $wpdb->prepare( "SELECT id FROM $table WHERE hash = %s ORDER BY id DESC LIMIT 1", $hash ) );
 		return absint( $id );
+	}
+
+	private static function build_finding_dedupe_hash( $task_id, $source_url, $summary, $target_type, $target_id ) {
+		$signature = [
+			absint( $task_id ),
+			self::normalize_url_for_dedupe( $source_url ),
+			self::normalize_text_for_dedupe( $summary ),
+			sanitize_key( (string) $target_type ),
+			absint( $target_id ),
+		];
+
+		return md5( implode( '|', $signature ) );
+	}
+
+	private static function find_existing_finding_id_by_signature( $task_id, $source_url, $summary, $target_type, $target_id ) {
+		$task_id = absint( $task_id );
+		$target_type = sanitize_key( (string) $target_type );
+		$target_id = absint( $target_id );
+		$summary_norm = self::normalize_text_for_dedupe( $summary );
+		$source_norm = self::normalize_url_for_dedupe( $source_url );
+
+		if ( $task_id <= 0 || '' === $summary_norm ) {
+			return 0;
+		}
+
+		global $wpdb;
+		$table = Toptour_Ref_Findings::get_table_name();
+		$rows = $wpdb->get_results(
+			$wpdb->prepare(
+				"SELECT id, excerpt, evidence_excerpt, source_url, evidence_url
+				 FROM $table
+				 WHERE related_collection_task_id = %d
+				 AND target_type = %s
+				 AND target_id = %d
+				 ORDER BY id DESC
+				 LIMIT 200",
+				$task_id,
+				$target_type,
+				$target_id
+			)
+		);
+
+		if ( ! is_array( $rows ) || empty( $rows ) ) {
+			return 0;
+		}
+
+		foreach ( $rows as $row ) {
+			$existing_summary = self::normalize_text_for_dedupe( (string) ( $row->excerpt ?? '' ) );
+			if ( '' === $existing_summary ) {
+				$existing_summary = self::normalize_text_for_dedupe( (string) ( $row->evidence_excerpt ?? '' ) );
+			}
+			if ( '' === $existing_summary || $existing_summary !== $summary_norm ) {
+				continue;
+			}
+
+			if ( '' === $source_norm ) {
+				return absint( $row->id );
+			}
+
+			$row_source_norm = self::normalize_url_for_dedupe( (string) ( $row->source_url ?? '' ) );
+			if ( '' === $row_source_norm ) {
+				$row_source_norm = self::normalize_url_for_dedupe( (string) ( $row->evidence_url ?? '' ) );
+			}
+
+			if ( '' !== $row_source_norm && $row_source_norm === $source_norm ) {
+				return absint( $row->id );
+			}
+		}
+
+		return 0;
+	}
+
+	private static function normalize_text_for_dedupe( $text ) {
+		$text = wp_strip_all_tags( (string) $text );
+		$text = remove_accents( $text );
+		$text = strtolower( $text );
+		$text = preg_replace( '/\s+/u', ' ', trim( $text ) );
+		if ( ! is_string( $text ) ) {
+			$text = '';
+		}
+
+		return sanitize_text_field( $text );
+	}
+
+	private static function normalize_url_for_dedupe( $url ) {
+		$url = esc_url_raw( (string) $url );
+		if ( '' === $url ) {
+			return '';
+		}
+
+		$host = wp_parse_url( $url, PHP_URL_HOST );
+		$path = wp_parse_url( $url, PHP_URL_PATH );
+		if ( ! is_string( $host ) || '' === $host ) {
+			return sanitize_text_field( strtolower( $url ) );
+		}
+
+		$host = preg_replace( '/^www\./i', '', strtolower( $host ) );
+		$path = is_string( $path ) ? rtrim( $path, '/' ) : '';
+
+		return sanitize_text_field( $host . $path );
 	}
 
 	private static function photo_candidate_exists( $task_id, $source_id, $evidence_url ) {
