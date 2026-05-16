@@ -363,6 +363,10 @@ class Toptour_Ref_AI_Outbox_Importer {
 			$error_count
 		);
 
+		if ( 0 === $new_count && 0 === $duplicate_count && 0 === $error_count ) {
+			$message = 'AI import returned no candidates (all modules empty).';
+		}
+
 		return [
 			'success' => true,
 			'message' => $message,

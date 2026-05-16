@@ -191,9 +191,9 @@ class Toptour_Ref_AI_Bridge {
 		$question = sanitize_textarea_field( implode( "\n", array_filter( $question_parts ) ) );
 
 		$constraints = [
-			'Pracuj iba s dodaným kontextom a candidate URL.',
+			'Preferuj dodané candidate URL; ak candidate URL chýbajú, navrhni bezpečné kandidáty podľa query_seeds a platform_hints ako pending_review.',
 			'Ak pre modul nič nenájdeš, nechaj pole prázdne a dôvod uveď v import_notes.',
-			'Pre photos navrhuj iba source_url, ktoré sú URL stránky kandidátneho zdroja s potenciálom foto-galérie.',
+			'Pre photos preferuj URL so sekciou photos/gallery/images; ak nie sú dostupné, navrhni aspoň najrelevantnejšiu stránku zdroja na manuálne overenie.',
 		];
 		if ( ! empty( $platform_hints ) ) {
 			$constraints[] = 'Preferuj platformy: ' . implode( ', ', $platform_hints ) . '.';
