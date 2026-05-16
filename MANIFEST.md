@@ -2,7 +2,7 @@
 
 **Plugin Name:** TOPTOUR Reference Finder  
 **Slug:** toptour-reference-finder  
-**Version:** 0.2.2
+**Version:** 0.2.3
 **Status:** Stabilization release (MVP foundations active)
 **Author:** TOPTOUR
 

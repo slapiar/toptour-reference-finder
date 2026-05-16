@@ -148,6 +148,12 @@
 Všetky zmeny v TOPTOUR Reference Finder.
 
 
+## 0.2.3
+- Added release package for post-recovery stabilization state.
+- Confirmed plugin version bump to 0.2.3.
+- Kept database schema version unchanged.
+- No functional schema changes.
+
 ## 0.1.1
 - Added database migration framework.
 - Added initial tables for facilities, destinations, signal patterns and collection tasks.
