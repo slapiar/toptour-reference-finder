@@ -177,6 +177,7 @@ $notice_type = 'success';
 $intake_result = null;
 $search_intake_result = null;
 $finder_mode = Toptour_Ref_Task_Processor::get_mode();
+$open_tracer_modal = 0;
 
 if ( $action === 'archive' && $edit_id ) {
 	$task_before_archive = Toptour_Ref_Collection_Tasks::get_task( $edit_id );
@@ -201,23 +202,8 @@ if ( $action === 'send_to_ai' && $edit_id ) {
 		wp_die( esc_html__( 'Security check failed.', 'toptour-reference-finder' ) );
 	}
 
-	$ai_result = Toptour_Ref_AI_Bridge::generate_inbox_batch( $edit_id );
-	if ( ! empty( $ai_result['ok'] ) ) {
-		$notice      = sprintf(
-			/* translators: %s: filename */
-			__( 'Batch odoslaný do AI inbox: %s', 'toptour-reference-finder' ),
-			esc_html( (string) ( $ai_result['filename'] ?? '' ) )
-		);
-		$notice_type = 'success';
-	} else {
-		$notice      = sprintf(
-			/* translators: %s: error message */
-			__( 'Odoslanie do AI zlyhalo: %s', 'toptour-reference-finder' ),
-			esc_html( (string) ( $ai_result['message'] ?? '' ) )
-		);
-		$notice_type = 'error';
-	}
-
+	// Set flag to open tracer modal
+	$open_tracer_modal = $edit_id;
 	$action = '';
 	$edit_id = 0;
 }
@@ -1733,7 +1719,7 @@ if ( $is_task_detail ) {
 						</td>
 						<td>
 							<?php if ( 'archived' !== $task->task_status ) : ?>
-								<a href="<?php echo esc_url( $send_ai_url ); ?>" onclick="return confirm('<?php esc_attr_e( 'Odoslať úlohu do AI inbox?', 'toptour-reference-finder' ); ?>')"><?php esc_html_e( 'Odoslať do AI', 'toptour-reference-finder' ); ?></a>
+								<a href="#" class="toptour-send-to-ai-btn" data-task-id="<?php echo esc_attr( $task->id ); ?>"><?php esc_html_e( 'Odoslať do AI', 'toptour-reference-finder' ); ?></a>
 							<?php else : ?>
 								—
 							<?php endif; ?>
@@ -1761,3 +1747,43 @@ if ( $is_task_detail ) {
 		<?php endif; ?>
 	<?php endif; ?>
 </div>
+
+<!-- Include Debug Tracer Modal -->
+<?php include TOPTOUR_REF_PLUGIN_DIR . 'admin/views/debug-tracer-modal.php'; ?>
+
+<!-- Tracer Modal Initialization Script -->
+<script>
+(function() {
+	'use strict';
+
+	// Handle Send to AI button clicks
+	document.querySelectorAll('.toptour-send-to-ai-btn').forEach(btn => {
+		btn.addEventListener('click', function(e) {
+			e.preventDefault();
+			
+			// Confirm before proceeding
+			if (!confirm('<?php esc_html_e( 'Odoslať túto úlohu do AI a spustiť trasovač?', 'toptour-reference-finder' ); ?>')) {
+				return;
+			}
+
+			const taskId = parseInt(this.dataset.taskId);
+			if (!taskId || !window.ToptourTracerController) {
+				alert('<?php esc_html_e( 'Chyba: Trasovač nie je dostupný.', 'toptour-reference-finder' ); ?>');
+				return;
+			}
+
+			// Open tracer modal with the task ID
+			window.ToptourTracerController.open(taskId);
+		});
+	});
+
+	// Auto-open tracer if flag is set
+	<?php if ( ! empty( $open_tracer_modal ) ) : ?>
+		if (window.ToptourTracerController) {
+			document.addEventListener('DOMContentLoaded', function() {
+				window.ToptourTracerController.open(<?php echo absint( $open_tracer_modal ); ?>);
+			});
+		}
+	<?php endif; ?>
+})();
+</script>

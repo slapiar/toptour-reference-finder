@@ -69,6 +69,7 @@ class Toptour_Ref_Loader {
 		require_once TOPTOUR_REF_PLUGIN_DIR . 'includes/class-photo-evidence.php';
 		require_once TOPTOUR_REF_PLUGIN_DIR . 'includes/class-admin.php';
 		require_once TOPTOUR_REF_PLUGIN_DIR . 'includes/class-rest-api.php';
+		require_once TOPTOUR_REF_PLUGIN_DIR . 'includes/class-debug-tracer-api.php';
 	}
 
 	/**

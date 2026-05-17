@@ -149,11 +149,23 @@ class Toptour_Ref_Admin {
 			TOPTOUR_REF_VERSION
 		);
 
+		// Enqueue tracer styles (inline in modal view).
+		// (CSS is included directly in debug-tracer-modal.php)
+
 		// Enqueue admin scripts.
 		wp_enqueue_script(
 			'toptour-ref-admin',
 			TOPTOUR_REF_PLUGIN_URL . 'admin/assets/admin.js',
 			array( 'jquery' ),
+			TOPTOUR_REF_VERSION,
+			true
+		);
+
+		// Enqueue tracer script.
+		wp_enqueue_script(
+			'toptour-ref-tracer',
+			TOPTOUR_REF_PLUGIN_URL . 'admin/assets/tracer.js',
+			array(),
 			TOPTOUR_REF_VERSION,
 			true
 		);
@@ -166,7 +178,15 @@ class Toptour_Ref_Admin {
 				'ajaxurl' => admin_url( 'admin-ajax.php' ),
 				'nonce'   => wp_create_nonce( 'toptour_ref_nonce' ),
 				'version' => TOPTOUR_REF_VERSION,
+				'rest_nonce' => wp_create_nonce( 'wp_rest' ),
 			)
+		);
+
+		// Localize tracer script
+		wp_localize_script(
+			'toptour-ref-tracer',
+			'toptourTracerNonce',
+			wp_create_nonce( 'wp_rest' )
 		);
 	}
 
