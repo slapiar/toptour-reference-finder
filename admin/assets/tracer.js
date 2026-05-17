@@ -58,6 +58,11 @@
 			document.getElementById('tracer-btn-supplement').addEventListener('click', 
 				() => this.submitSupplement());
 
+			const copyOutputBtn = document.getElementById('tracer-btn-copy-output');
+			if (copyOutputBtn) {
+				copyOutputBtn.addEventListener('click', () => this.copyFullOutput());
+			}
+
 			// Tab switching
 			this.modal.querySelectorAll('.toptour-debug-tracer__tab-btn').forEach(btn => {
 				btn.addEventListener('click', (e) => this.switchTab(e.target.dataset.tab));
@@ -889,6 +894,41 @@
 				this.addLog('info', `AI cleanup (${cleanupScope}/${reason}) odstránil ${removedTotal} súborov.`);
 			} catch (error) {
 				this.addLog('warning', `AI cleanup výnimka: ${error.message}`);
+			}
+		},
+
+		async copyFullOutput() {
+			const outputNode = document.getElementById('tracer-output-data');
+			if (!outputNode) {
+				this.addLog('warning', 'Výstup pre kopírovanie nie je dostupný.');
+				return;
+			}
+
+			const text = String(outputNode.textContent || '').trim();
+			if (!text) {
+				this.addLog('warning', 'Výstup je prázdny, nie je čo kopírovať.');
+				return;
+			}
+
+			try {
+				if (navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
+					await navigator.clipboard.writeText(text);
+					this.addLog('success', `Skopírovaný celý AI výstup (${text.length} znakov).`);
+					return;
+				}
+
+				const temp = document.createElement('textarea');
+				temp.value = text;
+				temp.setAttribute('readonly', 'readonly');
+				temp.style.position = 'absolute';
+				temp.style.left = '-9999px';
+				document.body.appendChild(temp);
+				temp.select();
+				document.execCommand('copy');
+				document.body.removeChild(temp);
+				this.addLog('success', `Skopírovaný celý AI výstup (${text.length} znakov).`);
+			} catch (error) {
+				this.addLog('error', `Kopírovanie výstupu zlyhalo: ${error.message}`);
 			}
 		},
 

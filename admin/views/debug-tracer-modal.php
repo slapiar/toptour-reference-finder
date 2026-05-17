@@ -110,6 +110,11 @@ if ( ! current_user_can( 'manage_toptour_references' ) ) {
 
 				<!-- Output Data Tab -->
 				<div class="toptour-debug-tracer__tab-pane" id="tab-output">
+					<div class="toptour-debug-tracer__output-actions">
+						<button id="tracer-btn-copy-output" type="button" class="button button-secondary">
+							<?php esc_html_e( 'Kopírovať celý AI výstup', 'toptour-reference-finder' ); ?>
+						</button>
+					</div>
 					<pre class="toptour-debug-tracer__data-display" id="tracer-output-data"><?php esc_html_e( 'Žiadne výstupné údaje', 'toptour-reference-finder' ); ?></pre>
 				</div>
 
@@ -191,6 +196,12 @@ if ( ! current_user_can( 'manage_toptour_references' ) ) {
 	display: flex;
 	justify-content: space-between;
 	align-items: center;
+}
+
+.toptour-debug-tracer__output-actions {
+	display: flex;
+	justify-content: flex-end;
+	margin-bottom: 10px;
 }
 
 .toptour-debug-tracer__title {
