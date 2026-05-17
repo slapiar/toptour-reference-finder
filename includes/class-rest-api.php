@@ -39,10 +39,50 @@ class Toptour_Ref_REST_API {
 	 * @return void
 	 */
 	public static function register_routes() {
-		// Current implementation: skeleton only, no routes registered.
-		// All endpoints are documented below for future implementation.
-		// Each endpoint will require proper authentication and capability checks.
-		// No sensitive data is exposed in this version.
+		// Task text import endpoint: parse and create task from text.
+		register_rest_route(
+			self::NAMESPACE,
+			'/import-task-text',
+			[
+				'methods'             => 'POST',
+				'callback'            => [ __CLASS__, 'import_task_text' ],
+				'permission_callback' => [ __CLASS__, 'user_can_access_api' ],
+				'args'                => [
+					'task_text' => [
+						'required' => true,
+						'type'    => 'string',
+						'validate_callback' => function ( $param ) {
+							return is_string( $param ) && strlen( $param ) > 10;
+						},
+					],
+				],
+			]
+		);
+	}
+
+	/**
+	 * Import task from text format.
+	 *
+	 * @param WP_REST_Request $request Request object.
+	 * @return WP_REST_Response
+	 */
+	public static function import_task_text( $request ) {
+		$task_text = sanitize_textarea_field( (string) $request->get_param( 'task_text' ) );
+
+		if ( '' === trim( $task_text ) ) {
+			return new WP_REST_Response(
+				[
+					'success' => false,
+					'message' => 'Vstupný text je prázdny.',
+				],
+				400
+			);
+		}
+
+		$result = Toptour_Ref_Task_Text_Parser::parse_and_import( $task_text );
+
+		$status_code = $result['ok'] ? 200 : 400;
+		return new WP_REST_Response( $result, $status_code );
 	}
 
 	/**
