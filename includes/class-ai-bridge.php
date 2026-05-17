@@ -166,13 +166,27 @@ class Toptour_Ref_AI_Bridge {
 
 		$analysis = Toptour_Ref_Collection_Task_Resolver::analyze_task( $task );
 		$query_seeds = is_array( $analysis['search_queries'] ?? null ) ? array_values( array_filter( array_map( 'sanitize_text_field', (array) $analysis['search_queries'] ) ) ) : [];
+		$query_seeds = array_values(
+			array_filter(
+				$query_seeds,
+				static function ( $query ) {
+					$query = strtolower( (string) $query );
+					return '' !== trim( $query ) && false === strpos( $query, 'working destination' );
+				}
+			)
+		);
 		if ( empty( $query_seeds ) ) {
 			$query_seeds = Toptour_Ref_Search_Provider::build_queries_from_task( $task, 5 );
 		}
 
 		$existing_candidates = Toptour_Ref_Search_Provider::get_existing_candidate_results( $task_id, 15 );
 		$platform_hints = is_array( $analysis['platform_hints'] ?? null ) ? array_values( array_filter( array_map( 'sanitize_text_field', (array) $analysis['platform_hints'] ) ) ) : [];
+		$interest_hints = is_array( $analysis['interest_candidates'] ?? null ) ? array_values( array_filter( array_map( 'sanitize_key', (array) $analysis['interest_candidates'] ) ) ) : [];
+		$poi_hints = is_array( $analysis['poi_candidates'] ?? null ) ? array_values( array_filter( array_map( 'sanitize_key', (array) $analysis['poi_candidates'] ) ) ) : [];
+		$locality_hints = is_array( $analysis['locality_hints'] ?? null ) ? array_values( array_filter( array_map( 'sanitize_key', (array) $analysis['locality_hints'] ) ) ) : [];
 		$finding_areas = is_array( $analysis['finding_area_candidates'] ?? null ) ? array_values( array_filter( array_map( 'sanitize_text_field', (array) $analysis['finding_area_candidates'] ) ) ) : [];
+		$directional_signals = is_array( $analysis['directional_signals'] ?? null ) ? array_values( array_filter( array_map( 'sanitize_text_field', (array) $analysis['directional_signals'] ) ) ) : [];
+		$linked_entities = is_array( $analysis['linked_entities'] ?? null ) ? $analysis['linked_entities'] : [];
 
 		$base_question = ! empty( $task->query_text )
 			? sanitize_textarea_field( (string) $task->query_text )
@@ -188,6 +202,9 @@ class Toptour_Ref_AI_Bridge {
 		if ( $photo_intent ) {
 			$question_parts[] = 'Zameraj sa na kandidátov pre photo_evidence_candidates zo zdrojov typu TripAdvisor/Booking, kde je pravdepodobná galéria alebo foto sekcia.';
 		}
+		if ( ! empty( $directional_signals ) ) {
+			$question_parts[] = 'Rešpektuj tieto smerné ukazovatele zo zadania úlohy: ' . implode( '; ', array_slice( $directional_signals, 0, 12 ) ) . '.';
+		}
 		$question = sanitize_textarea_field( implode( "\n", array_filter( $question_parts ) ) );
 
 		$constraints = [
@@ -197,6 +214,15 @@ class Toptour_Ref_AI_Bridge {
 		];
 		if ( ! empty( $platform_hints ) ) {
 			$constraints[] = 'Preferuj platformy: ' . implode( ', ', $platform_hints ) . '.';
+		}
+		if ( ! empty( $interest_hints ) ) {
+			$constraints[] = 'Pri kandidátoch zohľadni záujmy: ' . implode( ', ', $interest_hints ) . '.';
+		}
+		if ( ! empty( $poi_hints ) ) {
+			$constraints[] = 'Ak sú relevantné, doplň POI kandidátov pre: ' . implode( ', ', $poi_hints ) . '.';
+		}
+		if ( ! empty( $locality_hints ) ) {
+			$constraints[] = 'Preferuj lokality podľa hintov: ' . implode( ', ', $locality_hints ) . '.';
 		}
 
 		$context = [
@@ -210,7 +236,12 @@ class Toptour_Ref_AI_Bridge {
 			],
 			'analysis' => [
 				'platform_hints' => $platform_hints,
+				'interest_candidates' => $interest_hints,
+				'poi_candidates' => $poi_hints,
+				'locality_hints' => $locality_hints,
 				'finding_area_candidates' => $finding_areas,
+				'directional_signals' => $directional_signals,
+				'linked_entities' => $linked_entities,
 				'expected_source_type' => sanitize_text_field( (string) ( $analysis['expected_source_type'] ?? '' ) ),
 			],
 			'query_seeds' => array_slice( $query_seeds, 0, 15 ),
@@ -385,6 +416,7 @@ class Toptour_Ref_AI_Bridge {
 			return [ 'success' => false, 'outbox_file' => $outbox_file ];
 		}
 
+		$parsed_response = json_decode( (string) ( $openai['content'] ?? '' ), true );
 		$structured = self::extract_structured_output( $openai['content'] ?? '' );
 		$out = [
 			'version' => '1.0',
@@ -400,6 +432,7 @@ class Toptour_Ref_AI_Bridge {
 			'ai' => [
 				'model' => sanitize_text_field( (string) ( $settings['ai_model'] ?? '' ) ),
 				'raw_response' => (string) ( $openai['content'] ?? '' ),
+				'parsed_response' => is_array( $parsed_response ) ? $parsed_response : array(),
 			],
 			'structured_output' => $structured,
 		];
@@ -712,6 +745,7 @@ class Toptour_Ref_AI_Bridge {
 		$normalized['ai'] = is_array( $payload['ai'] ?? null ) ? [
 			'model' => sanitize_text_field( (string) ( $payload['ai']['model'] ?? '' ) ),
 			'raw_response' => (string) ( $payload['ai']['raw_response'] ?? '' ),
+			'parsed_response' => is_array( $payload['ai']['parsed_response'] ?? null ) ? self::sanitize_json_value( $payload['ai']['parsed_response'] ) : array(),
 		] : [];
 
 		if ( empty( $payload['structured_output'] ) || ! is_array( $payload['structured_output'] ) ) {

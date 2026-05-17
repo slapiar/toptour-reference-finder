@@ -27,8 +27,23 @@ class Toptour_Ref_Collection_Task_Resolver {
 
 		$analysis['task_target_type'] = sanitize_text_field( (string) ( $task->target_type ?? 'general' ) );
 		$analysis['task_target_id'] = absint( $task->target_id ?? 0 );
+		$analysis['linked_entities'] = self::resolve_task_linked_entities( $task );
+
+		if ( '' === (string) ( $analysis['destination_candidate'] ?? '' ) && ! empty( $analysis['linked_entities']['destination']['name'] ) ) {
+			$analysis['destination_candidate'] = sanitize_text_field( (string) $analysis['linked_entities']['destination']['name'] );
+		}
+
+		$analysis['platform_hints'] = self::merge_unique_strings(
+			(array) ( $analysis['platform_hints'] ?? [] ),
+			(array) ( $analysis['linked_entities']['offer']['platform_hints'] ?? [] )
+		);
+		$analysis['directional_signals'] = self::build_directional_signals( $analysis, $analysis['linked_entities'] );
 		$analysis['is_discovery_task'] = self::is_discovery_task( $task ) ? 1 : 0;
 		$analysis['discovery_query_seeds'] = self::build_discovery_query_seeds( $task, $analysis );
+		$analysis['discovery_query_seeds'] = self::merge_unique_strings(
+			(array) $analysis['discovery_query_seeds'],
+			self::build_directional_query_seeds( $analysis, $analysis['linked_entities'] )
+		);
 		if ( empty( $analysis['discovery_query_seeds'] ) ) {
 			$analysis['discovery_query_seeds'] = Toptour_Ref_Discovery_Provider::build_search_queries( $analysis );
 		}
@@ -45,6 +60,8 @@ class Toptour_Ref_Collection_Task_Resolver {
 		$expected_source_type = self::detect_expected_source_type( $text );
 		$platform_hints = self::detect_platform_hints( $text );
 		$interest_candidates = self::detect_interest_candidates( $text );
+		$poi_candidates = self::detect_poi_candidates( $text );
+		$locality_hints = self::detect_locality_hints( $text );
 		$finding_area_candidates = self::detect_finding_area_candidates( $text );
 
 		$existing_destination = $destination_candidate ? self::find_existing_destination( $destination_candidate ) : null;
@@ -82,6 +99,8 @@ class Toptour_Ref_Collection_Task_Resolver {
 			'expected_source_type' => $expected_source_type,
 			'platform_hints' => $platform_hints,
 			'interest_candidates' => $interest_candidates,
+			'poi_candidates' => $poi_candidates,
+			'locality_hints' => $locality_hints,
 			'finding_area_candidates' => $finding_area_candidates,
 		];
 
@@ -97,6 +116,9 @@ class Toptour_Ref_Collection_Task_Resolver {
 
 	public static function detect_destination_candidate( $text ) {
 		$text_lc = self::normalize_text( $text );
+		if ( false !== strpos( $text_lc, 'slovensko' ) || false !== strpos( $text_lc, 'slovakia' ) || false !== strpos( $text_lc, 'na slovensku' ) ) {
+			return 'Slovensko';
+		}
 		if ( false !== strpos( $text_lc, 'liptov' ) ) {
 			return 'Liptov';
 		}
@@ -160,6 +182,52 @@ class Toptour_Ref_Collection_Task_Resolver {
 		}
 
 		return array_values( array_unique( $interests ) );
+	}
+
+	public static function detect_poi_candidates( $text ) {
+		$text_lc = self::normalize_text( $text );
+		$pois = [];
+
+		if ( false !== strpos( $text_lc, 'aquapark' ) || false !== strpos( $text_lc, 'water park' ) ) {
+			$pois[] = 'aquapark';
+		}
+		if ( false !== strpos( $text_lc, 'kupel' ) || false !== strpos( $text_lc, 'spa' ) || false !== strpos( $text_lc, 'wellness' ) ) {
+			$pois[] = 'wellness_spa';
+		}
+		if ( false !== strpos( $text_lc, 'lyzi' ) || false !== strpos( $text_lc, 'ski' ) ) {
+			$pois[] = 'ski_resort';
+		}
+		if ( false !== strpos( $text_lc, 'turistika' ) || false !== strpos( $text_lc, 'hike' ) || false !== strpos( $text_lc, 'trail' ) ) {
+			$pois[] = 'hiking_area';
+		}
+		if ( false !== strpos( $text_lc, 'plaz' ) || false !== strpos( $text_lc, 'beach' ) ) {
+			$pois[] = 'beach_area';
+		}
+
+		return array_values( array_unique( $pois ) );
+	}
+
+	public static function detect_locality_hints( $text ) {
+		$text_lc = self::normalize_text( $text );
+		$hints = [];
+
+		if ( false !== strpos( $text_lc, 'centrum' ) || false !== strpos( $text_lc, 'center' ) ) {
+			$hints[] = 'city_center';
+		}
+		if ( false !== strpos( $text_lc, 'historicke centrum' ) || false !== strpos( $text_lc, 'stare mesto' ) || false !== strpos( $text_lc, 'old town' ) ) {
+			$hints[] = 'old_town';
+		}
+		if ( false !== strpos( $text_lc, 'pri jazere' ) || false !== strpos( $text_lc, 'jazero' ) || false !== strpos( $text_lc, 'lake' ) ) {
+			$hints[] = 'lake_area';
+		}
+		if ( false !== strpos( $text_lc, 'pri letisku' ) || false !== strpos( $text_lc, 'letisko' ) || false !== strpos( $text_lc, 'airport' ) ) {
+			$hints[] = 'airport_area';
+		}
+		if ( false !== strpos( $text_lc, 'pri plazi' ) || false !== strpos( $text_lc, 'beachfront' ) ) {
+			$hints[] = 'beachfront';
+		}
+
+		return array_values( array_unique( $hints ) );
 	}
 
 	public static function detect_platform_hints( $text ) {
@@ -275,7 +343,7 @@ class Toptour_Ref_Collection_Task_Resolver {
 			];
 		}
 
-		$destination_label = $destination !== '' ? $destination : ( ! empty( $analysis['destination_candidate'] ) ? sanitize_text_field( $analysis['destination_candidate'] ) : 'working destination' );
+		$destination_label = $destination !== '' ? $destination : ( ! empty( $analysis['destination_candidate'] ) ? sanitize_text_field( $analysis['destination_candidate'] ) : 'Slovensko' );
 		$focus = $facility !== '' ? strtolower( sanitize_text_field( $facility ) ) : 'hotel resort';
 
 		$seeds = [
@@ -411,7 +479,7 @@ class Toptour_Ref_Collection_Task_Resolver {
 			];
 		}
 
-		$destination = sanitize_text_field( $analysis['destination_candidate'] ?? 'Working destination' );
+		$destination = sanitize_text_field( $analysis['destination_candidate'] ?? 'Slovensko' );
 		return [
 			[ 'name' => $destination . ' Resort Candidate', 'facility_type' => 'resort', 'region' => $destination ],
 			[ 'name' => $destination . ' Hotel Candidate', 'facility_type' => 'hotel', 'region' => $destination ],
@@ -852,5 +920,126 @@ class Toptour_Ref_Collection_Task_Resolver {
 	private static function normalize_text( $text ) {
 		$text = strtolower( (string) $text );
 		return strtolower( remove_accents( $text ) );
+	}
+
+	private static function resolve_task_linked_entities( $task ) {
+		$destination = [
+			'id' => absint( $task->destination_id ?? 0 ),
+			'name' => '',
+		];
+		if ( $destination['id'] > 0 ) {
+			$row = Toptour_Ref_Destinations::get_destination( $destination['id'] );
+			if ( $row ) {
+				$destination['name'] = sanitize_text_field( (string) ( $row->name ?? '' ) );
+			}
+		}
+
+		$facility = [
+			'id' => absint( $task->supplier_id ?? 0 ),
+			'name' => '',
+			'type' => '',
+		];
+		if ( $facility['id'] > 0 ) {
+			$row = Toptour_Ref_Facilities::get_facility( $facility['id'] );
+			if ( $row ) {
+				$facility['name'] = sanitize_text_field( (string) ( $row->name ?? '' ) );
+				$facility['type'] = sanitize_text_field( (string) ( $row->facility_type ?? '' ) );
+			}
+		}
+
+		$offer = [
+			'id' => absint( $task->offer_id ?? 0 ),
+			'name' => '',
+			'url' => '',
+			'domain' => '',
+			'platform_hints' => [],
+		];
+		if ( $offer['id'] > 0 ) {
+			$row = Toptour_Ref_Offers::get_offer( $offer['id'] );
+			if ( $row ) {
+				$offer['name'] = sanitize_text_field( (string) ( $row->offer_name ?? '' ) );
+				$offer['url'] = esc_url_raw( (string) ( $row->offer_url ?? '' ) );
+				$offer['domain'] = self::extract_host( $offer['url'] );
+				$offer['platform_hints'] = self::detect_platform_hints( $offer['url'] . ' ' . $offer['domain'] . ' ' . $offer['name'] );
+			}
+		}
+
+		return [
+			'destination' => $destination,
+			'facility' => $facility,
+			'offer' => $offer,
+			'expected_source_type' => sanitize_text_field( (string) ( $task->expected_source_type ?? '' ) ),
+		];
+	}
+
+	private static function build_directional_signals( $analysis, $linked_entities ) {
+		$signals = [];
+
+		if ( ! empty( $analysis['destination_candidate'] ) ) {
+			$signals[] = 'destination:' . sanitize_text_field( (string) $analysis['destination_candidate'] );
+		}
+		if ( ! empty( $linked_entities['facility']['name'] ) ) {
+			$signals[] = 'facility:' . sanitize_text_field( (string) $linked_entities['facility']['name'] );
+		}
+		if ( ! empty( $linked_entities['offer']['name'] ) ) {
+			$signals[] = 'offer:' . sanitize_text_field( (string) $linked_entities['offer']['name'] );
+		}
+		if ( ! empty( $linked_entities['offer']['domain'] ) ) {
+			$signals[] = 'offer_domain:' . sanitize_text_field( (string) $linked_entities['offer']['domain'] );
+		}
+		foreach ( (array) ( $analysis['interest_candidates'] ?? [] ) as $interest ) {
+			$signals[] = 'interest:' . sanitize_key( (string) $interest );
+		}
+		foreach ( (array) ( $analysis['poi_candidates'] ?? [] ) as $poi ) {
+			$signals[] = 'poi:' . sanitize_key( (string) $poi );
+		}
+		foreach ( (array) ( $analysis['locality_hints'] ?? [] ) as $locality ) {
+			$signals[] = 'locality:' . sanitize_key( (string) $locality );
+		}
+
+		return self::merge_unique_strings( $signals, [] );
+	}
+
+	private static function build_directional_query_seeds( $analysis, $linked_entities ) {
+		$destination = sanitize_text_field( (string) ( $analysis['destination_candidate'] ?? '' ) );
+		$facility = sanitize_text_field( (string) ( $linked_entities['facility']['name'] ?? '' ) );
+		$offer = sanitize_text_field( (string) ( $linked_entities['offer']['name'] ?? '' ) );
+		$domain = sanitize_text_field( (string) ( $linked_entities['offer']['domain'] ?? '' ) );
+
+		$seeds = [];
+		if ( '' !== $destination && '' !== $facility ) {
+			$seeds[] = $destination . ' ' . $facility . ' guest reviews';
+			$seeds[] = $destination . ' ' . $facility . ' complaints';
+		}
+		if ( '' !== $destination && '' !== $offer ) {
+			$seeds[] = $destination . ' ' . $offer . ' recenzie';
+		}
+		if ( '' !== $domain && '' !== $destination ) {
+			$seeds[] = $domain . ' ' . $destination . ' reviews';
+		}
+
+		return self::merge_unique_strings( $seeds, [] );
+	}
+
+	private static function extract_host( $url ) {
+		$host = wp_parse_url( (string) $url, PHP_URL_HOST );
+		if ( ! is_string( $host ) || '' === trim( $host ) ) {
+			return '';
+		}
+
+		return strtolower( sanitize_text_field( $host ) );
+	}
+
+	private static function merge_unique_strings( $first, $second ) {
+		$merged = array_merge( (array) $first, (array) $second );
+		$normalized = [];
+		foreach ( $merged as $item ) {
+			$value = sanitize_text_field( (string) $item );
+			if ( '' !== $value ) {
+				$normalized[] = $value;
+			}
+		}
+
+		return array_values( array_unique( $normalized ) );
 	}
 }
