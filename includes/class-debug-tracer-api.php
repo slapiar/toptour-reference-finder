@@ -117,6 +117,39 @@ class Toptour_Ref_Debug_Tracer_API {
 				),
 			)
 		);
+
+		// Cleanup tracer artifacts
+		register_rest_route(
+			self::NAMESPACE,
+			'/tracer/cleanup-run',
+			array(
+				'methods'             => 'POST',
+				'callback'            => array( __CLASS__, 'cleanup_run' ),
+				'permission_callback' => array( __CLASS__, 'check_permissions' ),
+				'args'                => array(
+					'task_id' => array(
+						'required' => true,
+						'type'    => 'integer',
+					),
+					'batch_id' => array(
+						'required' => false,
+						'type'    => 'string',
+					),
+					'tracer_run_id' => array(
+						'required' => false,
+						'type'    => 'string',
+					),
+					'reason' => array(
+						'required' => false,
+						'type'    => 'string',
+					),
+					'cleanup_scope' => array(
+						'required' => false,
+						'type'    => 'string',
+					),
+				),
+			)
+		);
 	}
 
 	/**
@@ -341,12 +374,46 @@ class Toptour_Ref_Debug_Tracer_API {
 			);
 		}
 
+		$input_batch_id = sanitize_text_field( (string) ( $ai_response['input']['batch_id'] ?? '' ) );
+		$input_task_id = absint( $ai_response['input']['task_id'] ?? 0 );
+		if ( '' !== $input_batch_id && $input_batch_id !== $batch_id ) {
+			return new WP_REST_Response(
+				array(
+					'success' => false,
+					'message' => 'Outbox batch mismatch: požadovaný batch sa nezhoduje s obsahom outbox súboru.',
+					'diagnostics' => array(
+						'requested_batch_id' => $batch_id,
+						'outbox_input_batch_id' => $input_batch_id,
+						'outbox_file' => basename( $existing_outbox ),
+					),
+				),
+				409
+			);
+		}
+
+		if ( $input_task_id > 0 && $input_task_id !== $task_id ) {
+			return new WP_REST_Response(
+				array(
+					'success' => false,
+					'message' => 'Outbox task mismatch: outbox patrí inej úlohe.',
+					'diagnostics' => array(
+						'requested_task_id' => $task_id,
+						'outbox_input_task_id' => $input_task_id,
+						'outbox_file' => basename( $existing_outbox ),
+					),
+				),
+				409
+			);
+		}
+
 		return new WP_REST_Response(
 			array(
 				'success' => true,
 				'batch_id' => $batch_id,
 				'ai_model' => $ai_response['ai']['model'] ?? $settings['ai_model'],
 				'tokens_used' => 0,
+				'outbox_file' => basename( $existing_outbox ),
+				'generated_at' => sanitize_text_field( (string) ( $ai_response['generated_at'] ?? '' ) ),
 				'ai_response' => $ai_response,
 			),
 			200
@@ -451,6 +518,52 @@ class Toptour_Ref_Debug_Tracer_API {
 		);
 	}
 
+	/**
+	 * Cleanup tracer artifacts for current run.
+	 *
+	 * @param WP_REST_Request $request Request object.
+	 * @return WP_REST_Response
+	 */
+	public static function cleanup_run( $request ) {
+		$task_id = absint( $request->get_param( 'task_id' ) );
+		$batch_id = sanitize_text_field( $request->get_param( 'batch_id' ) );
+		$tracer_run_id = sanitize_text_field( $request->get_param( 'tracer_run_id' ) );
+		$reason = sanitize_text_field( $request->get_param( 'reason' ) );
+		$cleanup_scope = sanitize_key( (string) $request->get_param( 'cleanup_scope' ) );
+
+		if ( $task_id <= 0 ) {
+			return new WP_REST_Response(
+				array(
+					'success' => false,
+					'message' => 'Neplatné ID úlohy.',
+				),
+				400
+			);
+		}
+
+		if ( '' === $cleanup_scope ) {
+			$cleanup_scope = 'task';
+		}
+
+		$summary = self::cleanup_tracer_files( $task_id, $batch_id, $cleanup_scope );
+
+		if ( '' !== $tracer_run_id ) {
+			delete_transient( 'toptour_tracer_' . $tracer_run_id );
+		}
+
+		return new WP_REST_Response(
+			array(
+				'success' => true,
+				'task_id' => $task_id,
+				'batch_id' => $batch_id,
+				'cleanup_scope' => $cleanup_scope,
+				'reason' => $reason,
+				'summary' => $summary,
+			),
+			200
+		);
+	}
+
 	private static function find_outbox_file_for_batch( $batch_id ) {
 		$batch_id = sanitize_file_name( (string) $batch_id );
 		if ( '' === $batch_id ) {
@@ -479,6 +592,81 @@ class Toptour_Ref_Debug_Tracer_API {
 
 		$decoded = json_decode( $raw, true );
 		return is_array( $decoded ) ? $decoded : null;
+	}
+
+	private static function cleanup_tracer_files( $task_id, $batch_id, $cleanup_scope = 'task' ) {
+		$paths = Toptour_Ref_AI_Bridge::get_paths();
+		$task_id = absint( $task_id );
+		$batch_id = sanitize_file_name( (string) $batch_id );
+		$cleanup_scope = sanitize_key( (string) $cleanup_scope );
+
+		$patterns = [];
+		if ( 'batch' === $cleanup_scope && '' !== $batch_id ) {
+			$patterns[] = $batch_id . '.json';
+			$patterns[] = $batch_id . '.out.json';
+			$patterns[] = '*-' . $batch_id . '.json';
+			$patterns[] = '*-' . $batch_id . '.out.json';
+		} else {
+			$patterns[] = 'task-' . $task_id . '-*.json';
+			$patterns[] = 'task-' . $task_id . '-*.out.json';
+			$patterns[] = '*-task-' . $task_id . '-*.json';
+			$patterns[] = '*-task-' . $task_id . '-*.out.json';
+			if ( '' !== $batch_id ) {
+				$patterns[] = $batch_id . '.json';
+				$patterns[] = $batch_id . '.out.json';
+				$patterns[] = '*-' . $batch_id . '.json';
+				$patterns[] = '*-' . $batch_id . '.out.json';
+			}
+		}
+
+		$dirs = array(
+			'inbox' => $paths['inbox_dir'],
+			'outbox' => $paths['outbox_dir'],
+			'archive' => $paths['archive_dir'],
+			'error' => $paths['error_dir'],
+		);
+
+		$summary = array();
+		foreach ( $dirs as $dir_key => $dir_path ) {
+			$summary[ $dir_key ] = self::cleanup_in_dir_by_patterns( $dir_path, $patterns );
+		}
+
+		return $summary;
+	}
+
+	private static function cleanup_in_dir_by_patterns( $dir_path, $patterns ) {
+		$removed = 0;
+		$failed = 0;
+		$matched_files = array();
+
+		foreach ( (array) $patterns as $pattern ) {
+			if ( '' === trim( (string) $pattern ) ) {
+				continue;
+			}
+			$matches = glob( trailingslashit( $dir_path ) . $pattern );
+			if ( ! is_array( $matches ) || empty( $matches ) ) {
+				continue;
+			}
+			$matched_files = array_merge( $matched_files, $matches );
+		}
+
+		$matched_files = array_values( array_unique( $matched_files ) );
+		foreach ( $matched_files as $file_path ) {
+			if ( ! is_file( $file_path ) ) {
+				continue;
+			}
+			if ( @unlink( $file_path ) ) {
+				$removed++;
+			} else {
+				$failed++;
+			}
+		}
+
+		return array(
+			'matched' => count( $matched_files ),
+			'removed' => $removed,
+			'failed' => $failed,
+		);
 	}
 }
 

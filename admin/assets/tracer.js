@@ -43,11 +43,11 @@
 		attachEventListeners() {
 			// Close button
 			this.modal.querySelector('.toptour-debug-tracer__close').addEventListener('click', 
-				() => this.close());
+				() => this.close('close_button'));
 
 			// Cancel button
 			document.getElementById('tracer-btn-cancel').addEventListener('click', 
-				() => this.close());
+				() => this.close('cancel_button'));
 
 			// Primary action button
 			document.getElementById('tracer-btn-primary').addEventListener('click', 
@@ -163,7 +163,8 @@
 			};
 		},
 
-		close() {
+		async close(reason = 'manual_close') {
+			await this.requestCleanup(reason, 'task');
 			this.hideSupplementPanel();
 			this.modal.style.display = 'none';
 		},
@@ -363,6 +364,11 @@
 			if (shouldAutoContinue) {
 				return this.processNextStep();
 			}
+
+			if (this.currentStep >= this.totalSteps) {
+				this.addLog('success', 'Trasovanie je dokončené, spúšťam automatické čistenie AI súborov pre túto úlohu.');
+				await this.requestCleanup('completed', 'task');
+			}
 		},
 
 		evaluateStepData(stepMeta, stepResult) {
@@ -537,6 +543,8 @@
 			this.addLog('info', 'Spracovanie AI...');
 			document.getElementById('tracer-stage-desc').textContent = 
 				'Odoslanie batchu na spracovanie do AI. Čakám na odpoveď...';
+			const outputDiv = document.getElementById('tracer-output-data');
+			outputDiv.textContent = `Spracovávam AI pre batch ${this.batchId || 'N/A'} (task #${this.taskId}).`;
 
 			try {
 				const response = await fetch(this._getRestUrl('tracer/process-ai'), {
@@ -561,12 +569,27 @@
 
 				this.stepData[2] = data;
 
-				const outputDiv = document.getElementById('tracer-output-data');
 				const rawResponse = data.ai_response?.ai?.raw_response || '';
+				const returnedBatch = String(data.ai_response?.input?.batch_id || '');
+				const returnedTask = Number(data.ai_response?.input?.task_id || 0);
+				if (returnedBatch && this.batchId && returnedBatch !== this.batchId) {
+					throw new Error(`Batch mismatch (UI=${this.batchId}, OUTBOX=${returnedBatch}).`);
+				}
+				if (returnedTask > 0 && this.taskId > 0 && returnedTask !== this.taskId) {
+					throw new Error(`Task mismatch (UI=${this.taskId}, OUTBOX=${returnedTask}).`);
+				}
 				const normalizedJson = JSON.stringify(data.ai_response || {}, null, 2);
+				const metaHeader = [
+					`AKTÍVNY BATCH (UI): ${this.batchId || 'N/A'}`,
+					`BATCH V OUTBOX: ${returnedBatch || 'N/A'}`,
+					`AKTÍVNA ÚLOHA (UI): ${this.taskId || 0}`,
+					`ÚLOHA V OUTBOX: ${returnedTask || 0}`,
+					`OUTBOX FILE: ${data.outbox_file || 'N/A'}`,
+					`GENERATED AT: ${data.generated_at || 'N/A'}`
+				].join('\n');
 				outputDiv.textContent = rawResponse.trim() !== ''
-					? `RAW AI RESPONSE\n================\n${rawResponse}\n\nNORMALIZOVANÝ OUTBOX JSON\n========================\n${normalizedJson}`
-					: normalizedJson;
+					? `${metaHeader}\n\nRAW AI RESPONSE\n================\n${rawResponse}\n\nNORMALIZOVANÝ OUTBOX JSON\n========================\n${normalizedJson}`
+					: `${metaHeader}\n\nNORMALIZOVANÝ OUTBOX JSON\n========================\n${normalizedJson}`;
 
 				this.switchTab('output');
 
@@ -576,8 +599,12 @@
 				if (rawResponse.trim() !== '') {
 					this.addLog('info', `Dĺžka surovej AI odpovede: ${rawResponse.length} znakov`);
 				}
+				if (data.outbox_file) {
+					this.addLog('info', `Outbox súbor: ${data.outbox_file}`);
+				}
 				return data;
 			} catch (error) {
+				outputDiv.textContent = `Spracovanie AI zlyhalo pre batch ${this.batchId || 'N/A'} (task #${this.taskId}).\n\nDôvod:\n${error.message}`;
 				this.addLog('error', `Chyba AI spracovania: ${error.message}`);
 				throw error;
 			}
@@ -628,6 +655,7 @@
 				this.addLog('info', `Vytvorené fotodôkazy: ${data.photos_created || 0}`);
 				this.addLog('info', `Zdroje: ${data.sources_processed || 0}`);
 				document.getElementById('tracer-output-data').textContent = JSON.stringify(data, null, 2);
+				await this.requestCleanup('auto_processing_completed', 'batch');
 				return data;
 			} catch (error) {
 				this.addLog('error', `Chyba importu: ${error.message}`);
@@ -729,6 +757,48 @@
 			}
 
 			return false;
+		},
+
+		async requestCleanup(reason, cleanupScope = 'task') {
+			if (!this.taskId) {
+				return;
+			}
+
+			try {
+				const response = await fetch(this._getRestUrl('tracer/cleanup-run'), {
+					method: 'POST',
+					headers: {
+						'Content-Type': 'application/json',
+						'X-WP-Nonce': this._getNonce(),
+					},
+					body: JSON.stringify({
+						task_id: this.taskId,
+						batch_id: this.batchId,
+						tracer_run_id: this.tracerRunId,
+						reason,
+						cleanup_scope: cleanupScope,
+					})
+				});
+
+				if (!response.ok) {
+					this.addLog('warning', `AI cleanup sa nepodaril (HTTP ${response.status})`);
+					return;
+				}
+
+				const data = await response.json();
+				if (!data.success) {
+					this.addLog('warning', `AI cleanup sa nepodaril: ${data.message || 'neznáma chyba'}`);
+					return;
+				}
+
+				const summary = data.summary || {};
+				const removedTotal = ['inbox', 'outbox', 'archive', 'error'].reduce((sum, key) => {
+					return sum + Number(summary[key]?.removed || 0);
+				}, 0);
+				this.addLog('info', `AI cleanup (${cleanupScope}/${reason}) odstránil ${removedTotal} súborov.`);
+			} catch (error) {
+				this.addLog('warning', `AI cleanup výnimka: ${error.message}`);
+			}
 		},
 
 	_getRestUrl(endpoint) {
