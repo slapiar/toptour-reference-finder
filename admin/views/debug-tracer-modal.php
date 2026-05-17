@@ -39,11 +39,14 @@ if ( ! current_user_can( 'manage_toptour_references' ) ) {
 			</div>
 
 			<div class="toptour-debug-tracer__supplement" id="tracer-supplement-panel" style="display: none;">
+				<div class="toptour-debug-tracer__supplement-alert">
+					<?php esc_html_e( 'Pozor: nulový nález znamená, že sa máš vrátiť k úprave zadania a spustiť AI znovu od generovania batchu.', 'toptour-reference-finder' ); ?>
+				</div>
 				<div class="toptour-debug-tracer__supplement-title">
 					<?php esc_html_e( 'Doplnenie zadania pre ďalší pokus', 'toptour-reference-finder' ); ?>
 				</div>
 				<p class="toptour-debug-tracer__supplement-message" id="tracer-supplement-message">
-					<?php esc_html_e( 'Tento krok nevrátil zobraziteľné dáta. Doplň upresnenie zadania.', 'toptour-reference-finder' ); ?>
+					<?php esc_html_e( 'Nález je nulový alebo nepoužiteľný. Uprav zadanie pre AI a spusti trasovanie od generovania batchu znova.', 'toptour-reference-finder' ); ?>
 				</p>
 				<textarea id="tracer-supplement-input" class="toptour-debug-tracer__supplement-input" rows="4" placeholder="<?php esc_attr_e( 'Doplň presnejšie zadanie, očakávané výstupy, zdroje alebo konkrétne otázky pre AI.', 'toptour-reference-finder' ); ?>"></textarea>
 				<div class="toptour-debug-tracer__supplement-actions">
@@ -248,6 +251,17 @@ if ( ! current_user_can( 'manage_toptour_references' ) ) {
 	border: 1px solid #dcdcde;
 	border-radius: 6px;
 	background: #fff8e5;
+}
+
+.toptour-debug-tracer__supplement-alert {
+	margin-bottom: 12px;
+	padding: 10px 12px;
+	border-left: 4px solid #d63638;
+	background: #fcf0f1;
+	color: #8a2424;
+	font-weight: 600;
+	border-radius: 4px;
+	line-height: 1.45;
 }
 
 .toptour-debug-tracer__supplement-title {

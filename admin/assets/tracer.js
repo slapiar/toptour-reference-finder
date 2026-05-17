@@ -172,10 +172,14 @@
 			const panel = document.getElementById('tracer-supplement-panel');
 			const messageNode = document.getElementById('tracer-supplement-message');
 			const input = document.getElementById('tracer-supplement-input');
+			const statusBar = document.getElementById('tracer-status-bar');
+			const statusText = document.getElementById('tracer-status-text');
 
 			messageNode.textContent = message;
 			input.placeholder = placeholder;
 			panel.style.display = 'block';
+			statusBar.classList.add('toptour-debug-tracer__status--error');
+			statusText.textContent = 'Treba doplniť zadanie';
 			this.pendingSupplementStepKey = stepKey;
 			this.switchTab('input');
 			input.focus();
@@ -184,11 +188,18 @@
 		hideSupplementPanel() {
 			const panel = document.getElementById('tracer-supplement-panel');
 			const input = document.getElementById('tracer-supplement-input');
+			const statusBar = document.getElementById('tracer-status-bar');
 			if (panel) {
 				panel.style.display = 'none';
 			}
 			if (input) {
 				input.value = '';
+			}
+			if (statusBar) {
+				statusBar.classList.remove('toptour-debug-tracer__status--error');
+			}
+			if (this.steps && this.steps.length) {
+				this.updateStatus();
 			}
 			this.pendingSupplementStepKey = null;
 		},
@@ -376,19 +387,31 @@
 			if (stepKey === 'process_ai') {
 				const rawResponse = stepResult?.ai_response?.ai?.raw_response || '';
 				const structured = stepResult?.ai_response?.structured_output || {};
+				const hasStructuredData = this.hasMeaningfulStructuredData(structured);
 				return {
-					hasData: rawResponse.trim() !== '' || Object.keys(structured).length > 0,
-					message: 'AI krok nevrátil zobraziteľnú odpoveď. Doplň presnejšie zadanie, aby bolo jasné, aký výstup má AI vrátiť.',
-					placeholder: 'Doplň presné otázky pre AI, očakávaný formát odpovede, požadované entity alebo čo presne chýba v odpovedi.'
+					hasData: hasStructuredData,
+					message: 'AI odpoveď neobsahuje použiteľnú štruktúrovanú informáciu. Doplň zadanie a spusti proces odznova.',
+					placeholder: 'Doplň presné entity, očakávaný JSON výstup, povinné polia a čo presne má AI vrátiť.'
 				};
 			}
 
 			if (stepKey === 'start_import') {
-				const hasImportMetrics = !!(stepResult?.import_metrics && Object.keys(stepResult.import_metrics).length > 0);
+				const findingsCreated = Number(stepResult?.findings_created || 0);
+				const photosCreated = Number(stepResult?.photos_created || 0);
+				const sourcesProcessed = Number(stepResult?.sources_processed || 0);
+				const moduleMetrics = stepResult?.module_metrics && typeof stepResult.module_metrics === 'object'
+					? Object.values(stepResult.module_metrics)
+					: [];
+				const moduleCreatedTotal = moduleMetrics.reduce((sum, metrics) => {
+					const created = Number(metrics?.created || 0);
+					const updated = Number(metrics?.updated || 0);
+					return sum + created + updated;
+				}, 0);
+				const hasRealImportData = findingsCreated > 0 || photosCreated > 0 || moduleCreatedTotal > 0;
 				return {
-					hasData: hasImportMetrics || (stepResult?.findings?.length || 0) > 0 || (stepResult?.photos?.length || 0) > 0,
+					hasData: hasRealImportData,
 					message: 'Import nenašiel žiadne dáta na zápis. Doplň zadanie tak, aby AI vrátila konkrétne kandidáty alebo zistenia.',
-					placeholder: 'Doplň, aké typy kandidátov majú vzniknúť: zdroje, zistenia, fotodôkazy, destinácie, zariadenia.'
+					placeholder: 'Doplň, aké typy kandidátov majú vzniknúť: zdroje, zistenia, fotodôkazy, destinácie, zariadenia. Zameraj sa na to, aby aspoň jeden modul vytvoril nové alebo upravené záznamy.'
 				};
 			}
 
@@ -668,6 +691,22 @@
 		constraintsNode.textContent = constraints || 'N/A';
 		contextNode.textContent = JSON.stringify(context, null, 2);
 	},
+
+		hasMeaningfulStructuredData(value) {
+			if (Array.isArray(value)) {
+				return value.some(item => this.hasMeaningfulStructuredData(item));
+			}
+
+			if (value && typeof value === 'object') {
+				return Object.values(value).some(item => this.hasMeaningfulStructuredData(item));
+			}
+
+			if (typeof value === 'string') {
+				return value.trim() !== '';
+			}
+
+			return typeof value === 'number' ? value !== 0 : !!value;
+		},
 
 	_getRestUrl(endpoint) {
 			// Try multiple ways to get REST root
