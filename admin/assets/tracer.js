@@ -387,10 +387,13 @@
 			if (stepKey === 'process_ai') {
 				const rawResponse = stepResult?.ai_response?.ai?.raw_response || '';
 				const structured = stepResult?.ai_response?.structured_output || {};
-				const hasStructuredData = this.hasMeaningfulStructuredData(structured);
+				const needsFollowUp = this.hasNeedsFollowUpSignal(structured);
+				const hasStructuredData = !needsFollowUp && this.hasMeaningfulStructuredData(structured);
 				return {
 					hasData: hasStructuredData,
-					message: 'AI odpoveď neobsahuje použiteľnú štruktúrovanú informáciu. Doplň zadanie a spusti proces odznova.',
+					message: needsFollowUp
+						? 'AI vrátila len follow-up požiadavku bez konkrétnych kandidátov. Doplň zadanie a spusti proces odznova.'
+						: 'AI odpoveď neobsahuje použiteľnú štruktúrovanú informáciu. Doplň zadanie a spusti proces odznova.',
 					placeholder: 'Doplň presné entity, očakávaný JSON výstup, povinné polia a čo presne má AI vrátiť.'
 				};
 			}
@@ -697,6 +700,10 @@
 				return value.some(item => this.hasMeaningfulStructuredData(item));
 			}
 
+			if (this.hasNeedsFollowUpSignal(value)) {
+				return false;
+			}
+
 			if (value && typeof value === 'object') {
 				return Object.values(value).some(item => this.hasMeaningfulStructuredData(item));
 			}
@@ -706,6 +713,22 @@
 			}
 
 			return typeof value === 'number' ? value !== 0 : !!value;
+		},
+
+		hasNeedsFollowUpSignal(value) {
+			if (!value || typeof value !== 'object') {
+				return false;
+			}
+
+			if (value.needs_follow_up === true) {
+				return true;
+			}
+
+			if (String(value.status || '').toLowerCase() === 'needs_follow_up') {
+				return true;
+			}
+
+			return false;
 		},
 
 	_getRestUrl(endpoint) {
