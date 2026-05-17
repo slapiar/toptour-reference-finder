@@ -83,6 +83,25 @@ if ( ! current_user_can( 'manage_toptour_references' ) ) {
 			<div class="toptour-debug-tracer__tab-content">
 				<!-- Input Data Tab -->
 				<div class="toptour-debug-tracer__tab-pane toptour-debug-tracer__tab-pane--active" id="tab-input">
+					<div class="toptour-debug-tracer__ai-input" id="tracer-ai-input-panel" style="display: none;">
+						<div class="toptour-debug-tracer__ai-input-head">
+							<strong><?php esc_html_e( 'Vstup do AI (prehľad)', 'toptour-reference-finder' ); ?></strong>
+						</div>
+						<div class="toptour-debug-tracer__ai-input-grid">
+							<div class="toptour-debug-tracer__ai-input-block">
+								<div class="toptour-debug-tracer__ai-input-label"><?php esc_html_e( 'Otázka', 'toptour-reference-finder' ); ?></div>
+								<pre class="toptour-debug-tracer__ai-input-text" id="tracer-ai-question"></pre>
+							</div>
+							<div class="toptour-debug-tracer__ai-input-block">
+								<div class="toptour-debug-tracer__ai-input-label"><?php esc_html_e( 'Constraints', 'toptour-reference-finder' ); ?></div>
+								<pre class="toptour-debug-tracer__ai-input-text" id="tracer-ai-constraints"></pre>
+							</div>
+							<div class="toptour-debug-tracer__ai-input-block">
+								<div class="toptour-debug-tracer__ai-input-label"><?php esc_html_e( 'Context (task + hints)', 'toptour-reference-finder' ); ?></div>
+								<pre class="toptour-debug-tracer__ai-input-text" id="tracer-ai-context"></pre>
+							</div>
+						</div>
+					</div>
 					<pre class="toptour-debug-tracer__data-display" id="tracer-input-data"><?php esc_html_e( 'Čakám na spustenie...', 'toptour-reference-finder' ); ?></pre>
 				</div>
 
@@ -354,6 +373,54 @@ if ( ! current_user_can( 'manage_toptour_references' ) ) {
 	white-space: pre-wrap;
 	word-wrap: break-word;
 	color: #333;
+}
+
+.toptour-debug-tracer__ai-input {
+	margin: 12px;
+	padding: 12px;
+	border: 1px solid #dcdcde;
+	border-radius: 4px;
+	background: #ffffff;
+}
+
+.toptour-debug-tracer__ai-input-head {
+	margin-bottom: 10px;
+	color: #1d2327;
+}
+
+.toptour-debug-tracer__ai-input-grid {
+	display: grid;
+	grid-template-columns: 1fr;
+	gap: 10px;
+}
+
+.toptour-debug-tracer__ai-input-block {
+	border: 1px solid #e5e5e5;
+	border-radius: 4px;
+	background: #f8f9fa;
+	overflow: hidden;
+}
+
+.toptour-debug-tracer__ai-input-label {
+	padding: 8px 10px;
+	font-size: 12px;
+	font-weight: 600;
+	color: #50575e;
+	border-bottom: 1px solid #e5e5e5;
+	background: #f1f3f4;
+}
+
+.toptour-debug-tracer__ai-input-text {
+	margin: 0;
+	padding: 10px;
+	font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', 'Courier New', monospace;
+	font-size: 12px;
+	line-height: 1.4;
+	white-space: pre-wrap;
+	word-break: break-word;
+	max-height: 180px;
+	overflow: auto;
+	background: #fff;
 }
 
 .toptour-debug-tracer__photos-grid {

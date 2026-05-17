@@ -79,6 +79,7 @@
 
 			this.modal.style.display = 'flex';
 			this.hideSupplementPanel();
+			this.renderAIPromptSummary(null);
 			this.updateUI();
 			this.addLog('info', `Trasovač spustený pre úlohu #${taskId}`);
 		},
@@ -207,6 +208,7 @@
 			this.stepData[1] = null;
 			this.stepData[2] = null;
 			this.stepData[3] = null;
+			this.renderAIPromptSummary(null);
 			document.getElementById('tracer-output-data').textContent = 'Čakám na novú AI odpoveď...';
 			document.getElementById('tracer-photos-grid').innerHTML = '<p>' + this.escapeHtml('Žiadne fotografie') + '</p>';
 			this.hideSupplementPanel();
@@ -488,6 +490,7 @@
 
 				this.batchId = data.batch_id;
 				this.stepData[1] = data;
+				this.renderAIPromptSummary(data.batch_payload || null);
 
 				document.getElementById('tracer-input-data').textContent = 
 					JSON.stringify(data.batch_payload, null, 2);
@@ -634,6 +637,36 @@
 		if (photos.length > 0) {
 			this.switchTab('photos');
 		}
+	},
+
+	renderAIPromptSummary(batchPayload) {
+		const panel = document.getElementById('tracer-ai-input-panel');
+		const questionNode = document.getElementById('tracer-ai-question');
+		const constraintsNode = document.getElementById('tracer-ai-constraints');
+		const contextNode = document.getElementById('tracer-ai-context');
+
+		if (!panel || !questionNode || !constraintsNode || !contextNode) {
+			return;
+		}
+
+		if (!batchPayload || typeof batchPayload !== 'object') {
+			panel.style.display = 'none';
+			questionNode.textContent = '';
+			constraintsNode.textContent = '';
+			contextNode.textContent = '';
+			return;
+		}
+
+		const question = String(batchPayload.question || '').trim();
+		const constraints = String(batchPayload.constraints || '').trim();
+		const context = batchPayload.context && typeof batchPayload.context === 'object'
+			? batchPayload.context
+			: {};
+
+		panel.style.display = 'block';
+		questionNode.textContent = question || 'N/A';
+		constraintsNode.textContent = constraints || 'N/A';
+		contextNode.textContent = JSON.stringify(context, null, 2);
 	},
 
 	_getRestUrl(endpoint) {
