@@ -283,17 +283,58 @@ class Toptour_Ref_Debug_Tracer_API {
 		}
 
 		// In a real implementation, this would call the AI service
-		// For now, we return a mock response structure
+		// For now, we return a mock response structure with sample data
 		$ai_response = array(
 			'status' => 'processed',
 			'batch_id' => $batch_id,
 			'model' => $settings['ai_model'],
 			'timestamp' => current_time( 'mysql' ),
-			// Mock structured output
+			'processing_time_ms' => rand(500, 3000),
+			// Mock structured output with sample data
 			'structured_output' => array(
-				'findings' => array(),
-				'photo_evidence' => array(),
-				'sources' => array(),
+				'findings' => array(
+					array(
+						'title' => 'Pozitívny signál: Vysoká obsadenosť v letnej sezóne',
+						'sentiment' => 'positive',
+						'confidence' => 0.92,
+						'source_url' => 'https://example.com/review',
+						'category' => 'occupancy',
+					),
+					array(
+						'title' => 'Bezpečnostný problém: Chýbajúce hygijenické opatrenia',
+						'sentiment' => 'negative',
+						'confidence' => 0.78,
+						'source_url' => 'https://example.com/complaint',
+						'category' => 'safety',
+					),
+				),
+				'photo_evidence' => array(
+					array(
+						'url' => 'https://example.com/photo1.jpg',
+						'description' => 'Spoločenská miestnosť',
+						'caption' => 'Moderné zariadenie',
+					),
+					array(
+						'url' => 'https://example.com/photo2.jpg',
+						'description' => 'Vonkajší bazén',
+						'caption' => 'Čistý a dobre udržiavaný',
+					),
+				),
+				'sources' => array(
+					array(
+						'url' => 'https://tripadvisor.com/hotel/test',
+						'title' => 'Hotel na TripAdvisor',
+						'credibility' => 'high',
+						'source_type' => 'review_platform',
+					),
+					array(
+						'url' => 'https://booking.com/hotel/test',
+						'title' => 'Hotel na Booking.com',
+						'credibility' => 'high',
+						'source_type' => 'review_platform',
+					),
+				),
+				'summary' => 'Analýza identifikovala 2 kľúčové nálezy s vysokou dôveryhodnosťou. Pozitívne signály dominujú.',
 			),
 		);
 

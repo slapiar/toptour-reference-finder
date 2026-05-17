@@ -1751,30 +1751,129 @@ if ( $is_task_detail ) {
 <!-- Include Debug Tracer Modal -->
 <?php include TOPTOUR_REF_PLUGIN_DIR . 'admin/views/debug-tracer-modal.php'; ?>
 
+<!-- AI Processing Choice Modal -->
+<div id="toptour-ai-choice-modal" class="toptour-ai-choice-modal" style="display: none;">
+	<div class="toptour-ai-choice-modal__overlay"></div>
+	<div class="toptour-ai-choice-modal__container">
+		<h3><?php esc_html_e( 'Odoslať úlohu do AI', 'toptour-reference-finder' ); ?></h3>
+		<p><?php esc_html_e( 'Ako chcete spustiť spracovanie AI?', 'toptour-reference-finder' ); ?></p>
+		<div class="toptour-ai-choice-modal__buttons">
+			<button id="toptour-ai-with-tracer" class="button button-primary">
+				<?php esc_html_e( 'S trasovaním procesov', 'toptour-reference-finder' ); ?>
+			</button>
+			<button id="toptour-ai-without-tracer" class="button">
+				<?php esc_html_e( 'Bez trasovaní', 'toptour-reference-finder' ); ?>
+			</button>
+			<button id="toptour-ai-cancel" class="button">
+				<?php esc_html_e( 'Zrušiť', 'toptour-reference-finder' ); ?>
+			</button>
+		</div>
+	</div>
+</div>
+
+<style>
+.toptour-ai-choice-modal {
+	position: fixed;
+	top: 0;
+	left: 0;
+	width: 100%;
+	height: 100%;
+	z-index: 999998;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+}
+
+.toptour-ai-choice-modal__overlay {
+	position: absolute;
+	top: 0;
+	left: 0;
+	width: 100%;
+	height: 100%;
+	background: rgba(0, 0, 0, 0.7);
+	z-index: -1;
+}
+
+.toptour-ai-choice-modal__container {
+	background: white;
+	border-radius: 8px;
+	box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+	padding: 24px;
+	max-width: 400px;
+	width: 90%;
+}
+
+.toptour-ai-choice-modal__container h3 {
+	margin-top: 0;
+	margin-bottom: 12px;
+	font-size: 18px;
+	font-weight: 600;
+}
+
+.toptour-ai-choice-modal__container p {
+	margin: 0 0 20px 0;
+	color: #666;
+}
+
+.toptour-ai-choice-modal__buttons {
+	display: flex;
+	gap: 8px;
+	flex-direction: column;
+}
+
+.toptour-ai-choice-modal__buttons button {
+	padding: 10px 16px;
+	font-size: 14px;
+}
+</style>
+
 <!-- Tracer Modal Initialization Script -->
 <script>
 (function() {
 	'use strict';
+
+	let currentTaskId = null;
 
 	// Handle Send to AI button clicks
 	document.querySelectorAll('.toptour-send-to-ai-btn').forEach(btn => {
 		btn.addEventListener('click', function(e) {
 			e.preventDefault();
 			
-			// Confirm before proceeding
-			if (!confirm('<?php esc_html_e( 'Odoslať túto úlohu do AI a spustiť trasovač?', 'toptour-reference-finder' ); ?>')) {
+			currentTaskId = parseInt(this.dataset.taskId);
+			if (!currentTaskId) {
+				alert('<?php esc_html_e( 'Chyba: ID úlohy nie je dostupné.', 'toptour-reference-finder' ); ?>');
 				return;
 			}
 
-			const taskId = parseInt(this.dataset.taskId);
-			if (!taskId || !window.ToptourTracerController) {
-				alert('<?php esc_html_e( 'Chyba: Trasovač nie je dostupný.', 'toptour-reference-finder' ); ?>');
-				return;
-			}
-
-			// Open tracer modal with the task ID
-			window.ToptourTracerController.open(taskId);
+			// Show choice modal
+			document.getElementById('toptour-ai-choice-modal').style.display = 'flex';
 		});
+	});
+
+	// With Tracer button
+	document.getElementById('toptour-ai-with-tracer').addEventListener('click', function() {
+		if (!currentTaskId || !window.ToptourTracerController) {
+			alert('<?php esc_html_e( 'Chyba: Trasovač nie je dostupný.', 'toptour-reference-finder' ); ?>');
+			document.getElementById('toptour-ai-choice-modal').style.display = 'none';
+			return;
+		}
+		
+		document.getElementById('toptour-ai-choice-modal').style.display = 'none';
+		window.ToptourTracerController.open(currentTaskId);
+	});
+
+	// Without Tracer button
+	document.getElementById('toptour-ai-without-tracer').addEventListener('click', function() {
+		document.getElementById('toptour-ai-choice-modal').style.display = 'none';
+		// Spustenie bez trasovača - budúce rozšírenie
+		alert('<?php esc_html_e( 'Spracovanie bez trasovaní (budúce rozšírenie)', 'toptour-reference-finder' ); ?>');
+		currentTaskId = null;
+	});
+
+	// Cancel button
+	document.getElementById('toptour-ai-cancel').addEventListener('click', function() {
+		document.getElementById('toptour-ai-choice-modal').style.display = 'none';
+		currentTaskId = null;
 	});
 
 	// Auto-open tracer if flag is set

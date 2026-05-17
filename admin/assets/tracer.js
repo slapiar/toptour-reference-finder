@@ -275,12 +275,19 @@
 
 				this.stepData[2] = data;
 
-				document.getElementById('tracer-output-data').textContent = 
-					JSON.stringify(data.ai_response || {}, null, 2);
+			// Display AI response in Output tab
+			document.getElementById('tracer-output-data').textContent = 
+				JSON.stringify(data.ai_response || {}, null, 2);
 
-				this.addLog('success', 'AI spracovanie dokončené');
-				this.addLog('info', `AI model: ${data.ai_model || 'unknown'}`);
-				this.addLog('info', `Tokeny: ${data.tokens_used || 0}`);
+			// Auto-switch to Output tab to show results
+			this.switchTab('output');
+
+			this.addLog('success', 'AI spracovanie dokončené');
+			this.addLog('info', `AI model: ${data.ai_model || 'unknown'}`);
+			this.addLog('info', `Tokeny: ${data.tokens_used || 0}`);
+			if (data.ai_response && data.ai_response.processing_time_ms) {
+				this.addLog('info', `Čas spracovania: ${data.ai_response.processing_time_ms}ms`);
+			}
 			} catch (error) {
 				this.addLog('error', `Chyba AI spracovania: ${error.message}`);
 				throw error;
