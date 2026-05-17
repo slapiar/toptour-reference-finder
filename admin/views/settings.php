@@ -83,6 +83,7 @@ if ( $_SERVER['REQUEST_METHOD'] === 'POST' && isset( $_POST['toptour_ref_ai_brid
 			'ai_max_tokens' => absint( $_POST['ai_max_tokens'] ?? 1800 ),
 			'ai_temperature' => floatval( $_POST['ai_temperature'] ?? 0.2 ),
 			'ai_batch_limit' => absint( $_POST['ai_batch_limit'] ?? 5 ),
+			'ai_require_retrieval_candidates' => absint( $_POST['ai_require_retrieval_candidates'] ?? 0 ),
 		]
 	);
 	$ai_notice = __( 'AI bridge nastavenia boli uložené.', 'toptour-reference-finder' );
@@ -331,6 +332,16 @@ if ( $wpdb->get_var( $wpdb->prepare( "SHOW TABLES LIKE %s", $signal_table ) ) ) 
 				<tr>
 					<th scope="row"><label for="ai_batch_limit"><?php esc_html_e( 'ai_batch_limit', 'toptour-reference-finder' ); ?></label></th>
 					<td><input type="number" min="1" max="50" id="ai_batch_limit" name="ai_batch_limit" value="<?php echo esc_attr( (int) $ai_settings['ai_batch_limit'] ); ?>"></td>
+				</tr>
+				<tr>
+					<th scope="row"><?php esc_html_e( 'ai_require_retrieval_candidates', 'toptour-reference-finder' ); ?></th>
+					<td>
+						<label>
+							<input type="checkbox" name="ai_require_retrieval_candidates" value="1" <?php checked( ! empty( $ai_settings['ai_require_retrieval_candidates'] ) ); ?>>
+							<?php esc_html_e( 'Voliteľné: bez retrieval kandidátov nevolať OpenAI (šetrenie sessions/cost).', 'toptour-reference-finder' ); ?>
+						</label>
+						<p class="description"><?php esc_html_e( 'Ak je zapnuté a batch nemá existing_candidates URL, OpenAI volanie sa preskočí a tracer vráti jasný dôvod.', 'toptour-reference-finder' ); ?></p>
+					</td>
 				</tr>
 			</table>
 			<?php submit_button( __( 'Uložiť AI bridge', 'toptour-reference-finder' ), 'secondary', '', false ); ?>

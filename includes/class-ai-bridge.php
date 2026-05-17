@@ -24,6 +24,7 @@ class Toptour_Ref_AI_Bridge {
 			'ai_max_tokens' => 1800,
 			'ai_temperature' => 0.2,
 			'ai_batch_limit' => 5,
+			'ai_require_retrieval_candidates' => 0,
 		];
 
 		return [
@@ -33,6 +34,7 @@ class Toptour_Ref_AI_Bridge {
 			'ai_max_tokens' => max( 300, min( 8000, absint( get_option( 'toptour_ref_ai_max_tokens', $defaults['ai_max_tokens'] ) ) ) ),
 			'ai_temperature' => max( 0, min( 1, floatval( get_option( 'toptour_ref_ai_temperature', $defaults['ai_temperature'] ) ) ) ),
 			'ai_batch_limit' => max( 1, min( 50, absint( get_option( 'toptour_ref_ai_batch_limit', $defaults['ai_batch_limit'] ) ) ) ),
+			'ai_require_retrieval_candidates' => absint( get_option( 'toptour_ref_ai_require_retrieval_candidates', $defaults['ai_require_retrieval_candidates'] ) ) ? 1 : 0,
 		];
 	}
 
@@ -43,6 +45,7 @@ class Toptour_Ref_AI_Bridge {
 		$max_tokens = max( 300, min( 8000, absint( $input['ai_max_tokens'] ?? 1800 ) ) );
 		$temperature = max( 0, min( 1, floatval( $input['ai_temperature'] ?? 0.2 ) ) );
 		$batch_limit = max( 1, min( 50, absint( $input['ai_batch_limit'] ?? 5 ) ) );
+		$require_retrieval_candidates = ! empty( $input['ai_require_retrieval_candidates'] ) ? 1 : 0;
 
 		update_option( 'toptour_ref_ai_bridge_enabled', $enabled );
 		update_option( 'toptour_ref_ai_model', $model );
@@ -50,6 +53,7 @@ class Toptour_Ref_AI_Bridge {
 		update_option( 'toptour_ref_ai_max_tokens', $max_tokens );
 		update_option( 'toptour_ref_ai_temperature', $temperature );
 		update_option( 'toptour_ref_ai_batch_limit', $batch_limit );
+		update_option( 'toptour_ref_ai_require_retrieval_candidates', $require_retrieval_candidates );
 
 		self::ensure_directories();
 		return true;
@@ -430,6 +434,32 @@ class Toptour_Ref_AI_Bridge {
 		if ( '' === $question ) {
 			self::move_to_error( $inbox_file, 'missing_question', $filename );
 			return [ 'success' => false ];
+		}
+
+		if ( ! empty( $settings['ai_require_retrieval_candidates'] ) && ! self::payload_has_retrieval_candidates( $payload ) ) {
+			$out = self::build_error_output( $payload, 'openai_skipped_no_retrieval_candidates' );
+			$out['structured_output']['status'] = 'needs_follow_up';
+			$out['structured_output']['answer_summary'] = 'OpenAI volanie bolo preskočené: batch neobsahoval žiadne reálne retrieval kandidáty.';
+			$out['structured_output']['needs_follow_up'] = true;
+			$out['structured_output']['follow_up_question'] = 'Doplň candidate URL alebo naplň discovery kandidátov a spusti batch znova.';
+			$out['structured_output']['import_notes'][] = 'openai_skipped_no_retrieval_candidates';
+			$out['ai'] = [
+				'model' => sanitize_text_field( (string) ( $settings['ai_model'] ?? '' ) ),
+				'raw_response' => '',
+				'parsed_response' => [ 'status' => 'skipped' ],
+			];
+
+			$outbox_file = trailingslashit( $paths['outbox_dir'] ) . str_replace( '.json', '.out.json', $filename );
+			$written = file_put_contents( $outbox_file, wp_json_encode( $out, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE ) );
+			if ( false === $written ) {
+				self::rollback_claim( $inbox_file, $original_path );
+				return [ 'success' => false ];
+			}
+
+			$archive_file = trailingslashit( $paths['archive_dir'] ) . $filename;
+			rename( $inbox_file, $archive_file );
+
+			return [ 'success' => true, 'outbox_file' => $outbox_file ];
 		}
 
 		$openai = self::request_openai( $payload, $settings );
@@ -971,6 +1001,24 @@ class Toptour_Ref_AI_Bridge {
 		}
 
 		return array_values( array_unique( $normalized ) );
+	}
+
+	private static function payload_has_retrieval_candidates( $payload ) {
+		$context = is_array( $payload['context'] ?? null ) ? $payload['context'] : [];
+		$candidates = is_array( $context['existing_candidates'] ?? null ) ? $context['existing_candidates'] : [];
+
+		foreach ( $candidates as $row ) {
+			if ( ! is_array( $row ) ) {
+				continue;
+			}
+
+			$url = esc_url_raw( (string) ( $row['result_url'] ?? $row['candidate_url'] ?? $row['url'] ?? '' ) );
+			if ( '' !== $url ) {
+				return true;
+			}
+		}
+
+		return false;
 	}
 
 	private static function normalize_generic_candidate_rows( $rows ) {
