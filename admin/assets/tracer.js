@@ -19,6 +19,7 @@
 		stepData: {},
 		steps: [],
 		supplementalContext: '',
+		supplementalHistory: [],
 		pendingSupplementStepKey: null,
 		autoAdvanceTargetIndex: null,
 		importModuleOrder: [
@@ -74,6 +75,7 @@
 			this.isProcessing = false;
 			this.importResultData = null;
 			this.supplementalContext = '';
+			this.supplementalHistory = [];
 			this.pendingSupplementStepKey = null;
 			this.autoAdvanceTargetIndex = null;
 
@@ -215,7 +217,10 @@
 				return;
 			}
 
-			this.supplementalContext = extraText;
+			this.supplementalHistory.push(extraText);
+			this.supplementalContext = this.supplementalHistory
+				.map((text, index) => `DOPLNENIE #${index + 1}:\n${text}`)
+				.join('\n\n');
 			this.importResultData = null;
 			this.stepData[1] = null;
 			this.stepData[2] = null;
@@ -227,7 +232,7 @@
 			this.currentStep = 1;
 			this.autoAdvanceTargetIndex = 2;
 			this.updateUI();
-			this.addLog('info', 'Doplnenie zadania prijaté. Znovu generujem batch a odosielam ho do AI.');
+			this.addLog('info', `Doplnenie zadania prijaté (celkovo ${this.supplementalHistory.length}). Znovu generujem batch a odosielam ho do AI.`);
 			this.processNextStep();
 		},
 
@@ -510,7 +515,8 @@
 					body: JSON.stringify({
 						task_id: this.taskId,
 						tracer_run_id: this.tracerRunId,
-						supplemental_context: this.supplementalContext
+						supplemental_context: this.supplementalContext,
+						supplemental_history: this.supplementalHistory
 					})
 				});
 

@@ -64,6 +64,10 @@ class Toptour_Ref_Debug_Tracer_API {
 						'required' => false,
 						'type'    => 'string',
 					),
+					'supplemental_history' => array(
+						'required' => false,
+						'type'    => 'array',
+					),
 				),
 			)
 		);
@@ -234,6 +238,19 @@ class Toptour_Ref_Debug_Tracer_API {
 		$task_id = absint( $request->get_param( 'task_id' ) );
 		$tracer_run_id = sanitize_text_field( $request->get_param( 'tracer_run_id' ) );
 		$supplemental_context = sanitize_textarea_field( $request->get_param( 'supplemental_context' ) );
+		$supplemental_history_raw = $request->get_param( 'supplemental_history' );
+		$supplemental_history = array();
+		if ( is_array( $supplemental_history_raw ) ) {
+			foreach ( $supplemental_history_raw as $entry ) {
+				$clean_entry = sanitize_textarea_field( (string) $entry );
+				if ( '' !== trim( $clean_entry ) ) {
+					$supplemental_history[] = $clean_entry;
+				}
+			}
+		}
+		if ( empty( $supplemental_history ) && '' !== $supplemental_context ) {
+			$supplemental_history[] = $supplemental_context;
+		}
 
 		if ( $task_id <= 0 ) {
 			return new WP_REST_Response(
@@ -243,6 +260,10 @@ class Toptour_Ref_Debug_Tracer_API {
 				),
 				400
 			);
+		}
+
+		if ( ! empty( $supplemental_history ) ) {
+			self::append_supplemental_history_to_task_notes( $task_id, $tracer_run_id, $supplemental_history );
 		}
 
 		// Generate batch using existing bridge
@@ -268,12 +289,15 @@ class Toptour_Ref_Debug_Tracer_API {
 		if ( file_exists( $batch_file ) ) {
 			$raw = file_get_contents( $batch_file );
 			$batch_payload = json_decode( $raw, true );
-			if ( is_array( $batch_payload ) && '' !== $supplemental_context ) {
-				$batch_payload['question'] = trim( (string) ( $batch_payload['question'] ?? '' ) . "\n\nDOPLŇUJÚCE UPRESNENIE OD MANAŽÉRA:\n" . $supplemental_context );
+			if ( is_array( $batch_payload ) && ! empty( $supplemental_history ) ) {
+				$compiled_supplement = self::compile_supplemental_history_text( $supplemental_history );
+				$batch_payload['question'] = trim( (string) ( $batch_payload['question'] ?? '' ) . "\n\nDOPLŇUJÚCE UPRESNENIA OD MANAŽÉRA (SEKVENČNE):\n" . $compiled_supplement );
 				if ( ! isset( $batch_payload['context'] ) || ! is_array( $batch_payload['context'] ) ) {
 					$batch_payload['context'] = array();
 				}
-				$batch_payload['context']['tracer_supplemental_context'] = $supplemental_context;
+				$batch_payload['context']['tracer_supplemental_context'] = end( $supplemental_history );
+				$batch_payload['context']['tracer_supplemental_context_history'] = array_values( $supplemental_history );
+				$batch_payload['context']['tracer_supplemental_context_count'] = count( $supplemental_history );
 				file_put_contents( $batch_file, wp_json_encode( $batch_payload, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE ) );
 			}
 			if ( is_array( $batch_payload ) && isset( $batch_payload['input']['records'] ) ) {
@@ -561,6 +585,76 @@ class Toptour_Ref_Debug_Tracer_API {
 				'summary' => $summary,
 			),
 			200
+		);
+	}
+
+	private static function compile_supplemental_history_text( $supplemental_history ) {
+		$rows = array();
+		$index = 1;
+		foreach ( (array) $supplemental_history as $entry ) {
+			$clean_entry = trim( sanitize_textarea_field( (string) $entry ) );
+			if ( '' === $clean_entry ) {
+				continue;
+			}
+			$rows[] = sprintf( '[%d] %s', $index, $clean_entry );
+			$index++;
+		}
+
+		return implode( "\n\n", $rows );
+	}
+
+	private static function append_supplemental_history_to_task_notes( $task_id, $tracer_run_id, $supplemental_history ) {
+		$task_id = absint( $task_id );
+		if ( $task_id <= 0 || empty( $supplemental_history ) ) {
+			return;
+		}
+
+		$task = Toptour_Ref_Collection_Tasks::get_task( $task_id );
+		if ( ! $task ) {
+			return;
+		}
+
+		$current_notes = (string) ( $task->notes ?? '' );
+		$append_rows = array();
+		$timestamp = current_time( 'mysql' );
+
+		foreach ( array_values( (array) $supplemental_history ) as $index => $entry ) {
+			$clean_entry = trim( sanitize_textarea_field( (string) $entry ) );
+			if ( '' === $clean_entry ) {
+				continue;
+			}
+
+			$seq = $index + 1;
+			$marker_hash = substr( sha1( $task_id . '|' . $seq . '|' . $clean_entry ), 0, 12 );
+			$marker = '[TRACER_SUPPLEMENT#' . $seq . ':' . $marker_hash . ']';
+			if ( false !== strpos( $current_notes, $marker ) ) {
+				continue;
+			}
+
+			$append_rows[] = $marker . ' run=' . sanitize_text_field( (string) $tracer_run_id ) . ' at=' . $timestamp . "\n" . $clean_entry;
+		}
+
+		if ( empty( $append_rows ) ) {
+			return;
+		}
+
+		$header = "\n\n=== Tracer Supplemental History ===\n";
+		$append_text = implode( "\n\n", $append_rows );
+		$new_notes = rtrim( $current_notes );
+		if ( '' === $new_notes ) {
+			$new_notes = 'Tracer supplemental history:\n' . $append_text;
+		} else {
+			$new_notes .= $header . $append_text;
+		}
+
+		global $wpdb;
+		$wpdb->update(
+			Toptour_Ref_Collection_Tasks::get_table_name(),
+			array(
+				'notes' => sanitize_textarea_field( $new_notes ),
+				'updated_at' => current_time( 'mysql' ),
+			),
+			array( 'id' => $task_id )
 		);
 	}
 
