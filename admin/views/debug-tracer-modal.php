@@ -309,24 +309,71 @@ if ( ! current_user_can( 'manage_toptour_references' ) ) {
 .toptour-debug-tracer__photos-grid {
 	padding: 15px;
 	display: grid;
-	grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
-	gap: 12px;
+	grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+	gap: 20px;
 	background: white;
+	overflow-y: auto;
 }
 
 .toptour-debug-tracer__photo-item {
-	position: relative;
-	overflow: hidden;
+	border: 1px solid #dcdcde;
 	border-radius: 4px;
-	background: #f5f5f5;
-	aspect-ratio: 1;
-	cursor: pointer;
+	overflow: hidden;
+	background: #fff;
+	box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+	transition: box-shadow 0.2s ease;
+	display: flex;
+	flex-direction: column;
 }
 
-.toptour-debug-tracer__photo-item img {
+.toptour-debug-tracer__photo-item:hover {
+	box-shadow: 0 3px 8px rgba(0, 0, 0, 0.15);
+}
+
+.toptour-debug-tracer__photo-image {
+	width: 100%;
+	height: 200px;
+	overflow: hidden;
+	background: #f5f5f5;
+	flex-shrink: 0;
+}
+
+.toptour-debug-tracer__photo-image img {
 	width: 100%;
 	height: 100%;
 	object-fit: cover;
+	display: block;
+}
+
+.toptour-debug-tracer__photo-details {
+	padding: 12px;
+	font-size: 13px;
+	line-height: 1.5;
+	border-top: 1px solid #eee;
+	flex-grow: 1;
+	overflow-y: auto;
+}
+
+.toptour-debug-tracer__photo-details p {
+	margin: 8px 0;
+	padding: 0;
+}
+
+.toptour-debug-tracer__photo-details strong {
+	display: block;
+	color: #333;
+	font-weight: 600;
+	margin-bottom: 2px;
+}
+
+.toptour-debug-tracer__photo-details a {
+	color: #0073aa;
+	text-decoration: none;
+	word-break: break-all;
+}
+
+.toptour-debug-tracer__photo-details a:hover {
+	text-decoration: underline;
 }
 
 .toptour-debug-tracer__log {

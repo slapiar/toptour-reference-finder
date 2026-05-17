@@ -276,8 +276,8 @@
 				this.stepData[2] = data;
 
 			// Display AI response in Output tab
-			document.getElementById('tracer-output-data').textContent = 
-				JSON.stringify(data.ai_response || {}, null, 2);
+			const outputDiv = document.getElementById('tracer-output-data');
+			outputDiv.textContent = JSON.stringify(data.ai_response || {}, null, 2);
 
 			// Auto-switch to Output tab to show results
 			this.switchTab('output');
@@ -344,22 +344,30 @@
 				return;
 			}
 
-			grid.innerHTML = photos.map(photo => {
-				const photoUrl = photo.thumbnail_url || photo.photo_url;
-				return `<div class="toptour-debug-tracer__photo-item" 
-					title="${this.escapeHtml(photo.description || '')}">
-					<img src="${this.escapeHtml(photoUrl)}" alt="Photo" />
-				</div>`;
-			}).join('');
-		},
+		grid.innerHTML = photos.map((photo, idx) => {
+			const photoUrl = photo.thumbnail_url || photo.photo_url || 'data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22200%22 height=%22150%22%3E%3Crect fill=%22%23ddd%22 width=%22200%22 height=%22150%22/%3E%3Ctext x=%2250%25%22 y=%2250%25%22 dominant-baseline=%22middle%22 text-anchor=%22middle%22 font-family=%22sans-serif%22 font-size=%2214%22 fill=%22%23999%22%3EFoto ${idx + 1}%3C/text%3E%3C/svg%3E';
+			return `<div class="toptour-debug-tracer__photo-item">
+				<div class="toptour-debug-tracer__photo-image">
+					<img src="${this.escapeHtml(photoUrl)}" alt="Photo ${idx + 1}" />
+				</div>
+				<div class="toptour-debug-tracer__photo-details">
+					${photo.url ? `<p><strong>URL:</strong> <a href="${this.escapeHtml(photo.url)}" target="_blank" rel="noopener">Otvoriť</a></p>` : ''}
+					${photo.description ? `<p><strong>Popis:</strong> ${this.escapeHtml(photo.description)}</p>` : ''}
+					${photo.destination ? `<p><strong>Destinácia:</strong> ${this.escapeHtml(photo.destination)}</p>` : ''}
+					${photo.facility ? `<p><strong>Zariadenie:</strong> ${this.escapeHtml(photo.facility)}</p>` : ''}
+					${photo.source ? `<p><strong>Zdroj:</strong> ${this.escapeHtml(photo.source)}</p>` : ''}
+					${photo.finding ? `<p><strong>Zistenie:</strong> ${this.escapeHtml(photo.finding)}</p>` : ''}
+				</div>
+			</div>`;
+		}).join('');
+		
+		// Switch to photos tab if there are photos
+		if (photos.length > 0) {
+			this.switchTab('photos');
+		}
+	},
 
-		escapeHtml(text) {
-			const div = document.createElement('div');
-			div.textContent = text;
-			return div.innerHTML;
-		},
-
-		_getRestUrl(endpoint) {
+	_getRestUrl(endpoint) {
 			// Try multiple ways to get REST root
 			let restRoot = '';
 			

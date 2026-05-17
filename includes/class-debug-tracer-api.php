@@ -309,17 +309,47 @@ class Toptour_Ref_Debug_Tracer_API {
 					),
 				),
 				'photo_evidence' => array(
-					array(
-						'url' => 'https://example.com/photo1.jpg',
-						'description' => 'Spoločenská miestnosť',
-						'caption' => 'Moderné zariadenie',
-					),
-					array(
-						'url' => 'https://example.com/photo2.jpg',
-						'description' => 'Vonkajší bazén',
-						'caption' => 'Čistý a dobre udržiavaný',
-					),
+				array(
+					'url' => 'https://example.com/photo1.jpg',
+					'description' => 'Spoločenská miestnosť',
+					'destination' => 'Vysoké Tatry',
+					'facility' => 'Hotel Panorama',
+					'source' => 'TripAdvisor',
+					'finding' => 'Moderné zariadenie v dobrom stave',
 				),
+				array(
+					'url' => 'https://example.com/photo2.jpg',
+					'description' => 'Vonkajší bazén',
+					'destination' => 'Vysoké Tatry',
+					'facility' => 'Hotel Panorama',
+					'source' => 'Booking.com',
+					'finding' => 'Čistý a dobre udržiavaný bazén',
+				),
+				array(
+					'url' => 'https://example.com/photo3.jpg',
+					'description' => 'Spálne izby',
+					'destination' => 'Vysoké Tatry',
+					'facility' => 'Hotel Panorama',
+					'source' => 'Google Photos',
+					'finding' => 'Príjemné a čisto vybavené spálne',
+				),
+				array(
+					'url' => 'https://example.com/photo4.jpg',
+					'description' => 'Reštaurácia',
+					'destination' => 'Vysoké Tatry',
+					'facility' => 'Hotel Panorama',
+					'source' => 'Instagram',
+					'finding' => 'Kvalitná reštauračná ponuka',
+				),
+				array(
+					'url' => 'https://example.com/photo5.jpg',
+					'description' => 'Wellness centrum',
+					'destination' => 'Vysoké Tatry',
+					'facility' => 'Hotel Panorama',
+					'source' => 'YouTube',
+					'finding' => 'Moderné wellness zariadenia',
+				),
+			)
 				'sources' => array(
 					array(
 						'url' => 'https://tripadvisor.com/hotel/test',
