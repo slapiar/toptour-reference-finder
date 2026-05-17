@@ -143,7 +143,6 @@
 			if (this.isProcessing) return;
 
 			this.isProcessing = true;
-			this.showContinueButton();
 
 			try {
 				switch (this.currentStep) {
@@ -164,10 +163,12 @@
 				}
 
 				this.currentStep++;
+						this.showContinueButton();
 				this.updateUI();
 			} catch (error) {
 				this.addLog('error', `Chyba: ${error.message}`);
 				document.getElementById('tracer-status-bar').classList.add('toptour-debug-tracer__status--error');
+					this.showProcessButton();
 			} finally {
 				this.isProcessing = false;
 			}
