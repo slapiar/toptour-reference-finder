@@ -1537,6 +1537,14 @@ class Toptour_Ref_AI_Outbox_Importer {
 			return true;
 		}
 
+		// Block generic YouTube URLs with "example" in watch ID (e.g., ?v=example).
+		if ( false !== strpos( $host, 'youtube' ) ) {
+			$video_id = wp_parse_url( $url, PHP_URL_QUERY );
+			if ( is_string( $video_id ) && false !== strpos( $video_id, 'example' ) ) {
+				return true;
+			}
+		}
+
 		return false;
 	}
 
