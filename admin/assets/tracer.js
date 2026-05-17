@@ -391,13 +391,14 @@
 			}
 
 			if (stepKey === 'process_ai') {
-				const rawResponse = stepResult?.ai_response?.ai?.raw_response || '';
 				const structured = stepResult?.ai_response?.structured_output || {};
 				const needsFollowUp = this.hasNeedsFollowUpSignal(structured);
-				const hasStructuredData = !needsFollowUp && this.hasMeaningfulStructuredData(structured);
+				const candidateCount = this.countStructuredCandidates(structured);
+				const hasCandidateData = candidateCount > 0;
+				const hasStructuredData = hasCandidateData || (!needsFollowUp && this.hasMeaningfulStructuredData(structured));
 				return {
 					hasData: hasStructuredData,
-					message: needsFollowUp
+					message: (needsFollowUp && !hasCandidateData)
 						? 'AI vrátila len follow-up požiadavku bez konkrétnych kandidátov. Doplň zadanie a spusti proces odznova.'
 						: 'AI odpoveď neobsahuje použiteľnú štruktúrovanú informáciu. Doplň zadanie a spusti proces odznova.',
 					placeholder: 'Doplň presné entity, očakávaný JSON výstup, povinné polia a čo presne má AI vrátiť.'
@@ -596,6 +597,8 @@
 				this.addLog('success', 'AI spracovanie dokončené');
 				this.addLog('info', `AI model: ${data.ai_model || 'unknown'}`);
 				this.addLog('info', `Tokeny: ${data.tokens_used || 0}`);
+				const candidateCount = this.countStructuredCandidates(data.ai_response?.structured_output || {});
+				this.addLog('info', `Počet AI kandidátov naprieč modulmi: ${candidateCount}`);
 				if (rawResponse.trim() !== '') {
 					this.addLog('info', `Dĺžka surovej AI odpovede: ${rawResponse.length} znakov`);
 				}
@@ -757,6 +760,31 @@
 			}
 
 			return false;
+		},
+
+		countStructuredCandidates(structured) {
+			if (!structured || typeof structured !== 'object') {
+				return 0;
+			}
+
+			const candidateKeys = [
+				'candidate_sources',
+				'candidate_facilities',
+				'candidate_destinations',
+				'candidate_points_of_interest',
+				'candidate_contacts',
+				'candidate_interests',
+				'pending_findings',
+				'photo_evidence_candidates'
+			];
+
+			return candidateKeys.reduce((sum, key) => {
+				const value = structured[key];
+				if (Array.isArray(value)) {
+					return sum + value.length;
+				}
+				return sum;
+			}, 0);
 		},
 
 		async requestCleanup(reason, cleanupScope = 'task') {
