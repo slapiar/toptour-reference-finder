@@ -1351,6 +1351,27 @@ class Toptour_Ref_AI_Outbox_Importer {
 			$visible_details = sanitize_textarea_field( (string) ( $row['visible_details'] ?? '' ) );
 			$contradiction_note = sanitize_textarea_field( (string) ( $row['contradiction_note'] ?? '' ) );
 
+			if ( ! self::has_meaningful_text( $observation_summary, 10 ) ) {
+				$fallback_lines = [];
+				if ( '' !== $evidence_title ) {
+					$fallback_lines[] = 'Photo candidate from ' . $evidence_title . '.';
+				}
+				if ( '' !== $source_url ) {
+					$fallback_lines[] = 'Evidence URL: ' . $source_url;
+				}
+				$notes_hint = sanitize_textarea_field( (string) ( $row['notes'] ?? '' ) );
+				if ( '' !== $notes_hint ) {
+					$fallback_lines[] = self::trim_text( $notes_hint, 220 );
+				}
+				$observation_summary = sanitize_textarea_field( implode( ' ', array_filter( $fallback_lines ) ) );
+			}
+
+			if ( ! self::has_meaningful_text( $visible_details, 10 ) ) {
+				$visible_details = sanitize_textarea_field(
+					'Potential guest photo or gallery page detected for manual visual review. Confirm family-travel relevance, accessibility cues, and any visible accommodation details.'
+				);
+			}
+
 			if ( ! self::has_meaningful_text( $observation_summary, 10 ) && ! self::has_meaningful_text( $visible_details, 10 ) ) {
 				$result['errors']++;
 				continue;
