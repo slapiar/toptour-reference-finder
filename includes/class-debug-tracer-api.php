@@ -60,6 +60,10 @@ class Toptour_Ref_Debug_Tracer_API {
 						'required' => true,
 						'type'    => 'string',
 					),
+					'supplemental_context' => array(
+						'required' => false,
+						'type'    => 'string',
+					),
 				),
 			)
 		);
@@ -196,6 +200,7 @@ class Toptour_Ref_Debug_Tracer_API {
 	public static function generate_batch( $request ) {
 		$task_id = absint( $request->get_param( 'task_id' ) );
 		$tracer_run_id = sanitize_text_field( $request->get_param( 'tracer_run_id' ) );
+		$supplemental_context = sanitize_textarea_field( $request->get_param( 'supplemental_context' ) );
 
 		if ( $task_id <= 0 ) {
 			return new WP_REST_Response(
@@ -230,13 +235,21 @@ class Toptour_Ref_Debug_Tracer_API {
 		if ( file_exists( $batch_file ) ) {
 			$raw = file_get_contents( $batch_file );
 			$batch_payload = json_decode( $raw, true );
+			if ( is_array( $batch_payload ) && '' !== $supplemental_context ) {
+				$batch_payload['question'] = trim( (string) ( $batch_payload['question'] ?? '' ) . "\n\nDOPLŇUJÚCE UPRESNENIE OD MANAŽÉRA:\n" . $supplemental_context );
+				if ( ! isset( $batch_payload['context'] ) || ! is_array( $batch_payload['context'] ) ) {
+					$batch_payload['context'] = array();
+				}
+				$batch_payload['context']['tracer_supplemental_context'] = $supplemental_context;
+				file_put_contents( $batch_file, wp_json_encode( $batch_payload, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE ) );
+			}
 			if ( is_array( $batch_payload ) && isset( $batch_payload['input']['records'] ) ) {
 				$record_count = count( (array) $batch_payload['input']['records'] );
 			}
 		}
 
 		// Extract batch ID
-		$batch_id = $batch_result['batch_id'] ?? md5( $batch_result['filename'] );
+		$batch_id = $batch_result['batch_id'] ?? pathinfo( $batch_result['filename'], PATHINFO_FILENAME );
 
 		return new WP_REST_Response(
 			array(
@@ -282,98 +295,50 @@ class Toptour_Ref_Debug_Tracer_API {
 			);
 		}
 
-		// In a real implementation, this would call the AI service
-		// For now, we return a mock response structure with sample data
-		$ai_response = array(
-			'status' => 'processed',
-			'batch_id' => $batch_id,
-			'model' => $settings['ai_model'],
-			'timestamp' => current_time( 'mysql' ),
-			'processing_time_ms' => rand(500, 3000),
-			// Mock structured output with sample data
-			'structured_output' => array(
-				'findings' => array(
+		$existing_outbox = self::find_outbox_file_for_batch( $batch_id );
+		if ( '' === $existing_outbox ) {
+			$bridge_result = Toptour_Ref_AI_Bridge::process_pending_batches( max( 10, absint( $settings['ai_batch_limit'] ?? 1 ) ) );
+
+			if ( empty( $bridge_result['success'] ) ) {
+				return new WP_REST_Response(
 					array(
-						'title' => 'Pozitívny signál: Vysoká obsadenosť v letnej sezóne',
-						'sentiment' => 'positive',
-						'confidence' => 0.92,
-						'source_url' => 'https://example.com/review',
-						'category' => 'occupancy',
+						'success' => false,
+						'message' => $bridge_result['message'] ?? 'AI Bridge spracovanie zlyhalo.',
 					),
-					array(
-						'title' => 'Bezpečnostný problém: Chýbajúce hygijenické opatrenia',
-						'sentiment' => 'negative',
-						'confidence' => 0.78,
-						'source_url' => 'https://example.com/complaint',
-						'category' => 'safety',
-					),
-				),
-				'photo_evidence' => array(
+					400
+				);
+			}
+
+			$existing_outbox = self::find_outbox_file_for_batch( $batch_id );
+		}
+
+		if ( '' === $existing_outbox || ! file_exists( $existing_outbox ) ) {
+			return new WP_REST_Response(
 				array(
-					'url' => 'https://example.com/photo1.jpg',
-					'description' => 'Spoločenská miestnosť',
-					'destination' => 'Vysoké Tatry',
-					'facility' => 'Hotel Panorama',
-					'source' => 'TripAdvisor',
-					'finding' => 'Moderné zariadenie v dobrom stave',
+					'success' => false,
+					'message' => 'Pre batch sa nenašla AI odpoveď v outboxe.',
 				),
+				404
+			);
+		}
+
+		$ai_response = self::read_json_file( $existing_outbox );
+		if ( ! is_array( $ai_response ) ) {
+			return new WP_REST_Response(
 				array(
-					'url' => 'https://example.com/photo2.jpg',
-					'description' => 'Vonkajší bazén',
-					'destination' => 'Vysoké Tatry',
-					'facility' => 'Hotel Panorama',
-					'source' => 'Booking.com',
-					'finding' => 'Čistý a dobre udržiavaný bazén',
+					'success' => false,
+					'message' => 'AI odpoveď v outboxe nie je validný JSON.',
 				),
-				array(
-					'url' => 'https://example.com/photo3.jpg',
-					'description' => 'Spálne izby',
-					'destination' => 'Vysoké Tatry',
-					'facility' => 'Hotel Panorama',
-					'source' => 'Google Photos',
-					'finding' => 'Príjemné a čisto vybavené spálne',
-				),
-				array(
-					'url' => 'https://example.com/photo4.jpg',
-					'description' => 'Reštaurácia',
-					'destination' => 'Vysoké Tatry',
-					'facility' => 'Hotel Panorama',
-					'source' => 'Instagram',
-					'finding' => 'Kvalitná reštauračná ponuka',
-				),
-				array(
-					'url' => 'https://example.com/photo5.jpg',
-					'description' => 'Wellness centrum',
-					'destination' => 'Vysoké Tatry',
-					'facility' => 'Hotel Panorama',
-					'source' => 'YouTube',
-					'finding' => 'Moderné wellness zariadenia',
-				),
-			),
-			'sources' => array(
-					array(
-						'url' => 'https://tripadvisor.com/hotel/test',
-						'title' => 'Hotel na TripAdvisor',
-						'credibility' => 'high',
-						'source_type' => 'review_platform',
-					),
-					array(
-						'url' => 'https://booking.com/hotel/test',
-						'title' => 'Hotel na Booking.com',
-						'credibility' => 'high',
-						'source_type' => 'review_platform',
-					),
-				),
-				'summary' => 'Analýza identifikovala 2 kľúčové nálezy s vysokou dôveryhodnosťou. Pozitívne signály dominujú.',
-			),
-		);
+				500
+			);
+		}
 
 		return new WP_REST_Response(
 			array(
 				'success' => true,
 				'batch_id' => $batch_id,
-				'ai_model' => $settings['ai_model'],
-				'tokens_used' => 1500, // Mock token count
+				'ai_model' => $ai_response['ai']['model'] ?? $settings['ai_model'],
+				'tokens_used' => 0,
 				'ai_response' => $ai_response,
 			),
 			200
@@ -401,7 +366,7 @@ class Toptour_Ref_Debug_Tracer_API {
 		}
 
 		// Run the actual import process
-		$import_result = Toptour_Ref_AI_Outbox_Importer::process_pending_outbox( 1 );
+		$import_result = Toptour_Ref_AI_Outbox_Importer::process_pending_outbox( 10 );
 		$latest_report = array();
 		$reports = Toptour_Ref_AI_Outbox_Importer::get_import_reports( 10 );
 
@@ -439,12 +404,23 @@ class Toptour_Ref_Debug_Tracer_API {
 			
 			if ( is_array( $recent_photos ) ) {
 				foreach ( $recent_photos as $photo ) {
-					$photo_url = $photo->photo_url ?? '';
+					if ( absint( $photo->related_collection_task_id ?? 0 ) !== $task_id ) {
+						continue;
+					}
+
+					$photo_url = $photo->evidence_url ?? '';
+					$thumbnail_url = $photo->thumbnail_url ?? $photo_url;
+					if ( '' === $photo_url && '' === $thumbnail_url ) {
+						continue;
+					}
+
 					$photos[] = array(
 						'id' => $photo->id ?? 0,
-						'description' => $photo->photo_title ?? $photo->description ?? '',
+						'description' => $photo->evidence_title ?? $photo->description ?? '',
 						'photo_url' => $photo_url,
-						'thumbnail_url' => $photo_url, // Same URL used for thumbnail
+						'thumbnail_url' => $thumbnail_url,
+						'url' => $photo_url,
+						'finding' => $photo->observation_summary ?? '',
 					);
 				}
 			}
@@ -465,6 +441,36 @@ class Toptour_Ref_Debug_Tracer_API {
 			),
 			200
 		);
+	}
+
+	private static function find_outbox_file_for_batch( $batch_id ) {
+		$batch_id = sanitize_file_name( (string) $batch_id );
+		if ( '' === $batch_id ) {
+			return '';
+		}
+
+		$paths = Toptour_Ref_AI_Bridge::get_paths();
+		$candidate = trailingslashit( $paths['outbox_dir'] ) . $batch_id . '.out.json';
+
+		if ( file_exists( $candidate ) ) {
+			return $candidate;
+		}
+
+		return '';
+	}
+
+	private static function read_json_file( $file_path ) {
+		if ( '' === $file_path || ! file_exists( $file_path ) ) {
+			return null;
+		}
+
+		$raw = file_get_contents( $file_path );
+		if ( false === $raw || '' === trim( $raw ) ) {
+			return null;
+		}
+
+		$decoded = json_decode( $raw, true );
+		return is_array( $decoded ) ? $decoded : null;
 	}
 }
 

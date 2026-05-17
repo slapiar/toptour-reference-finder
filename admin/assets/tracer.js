@@ -18,6 +18,9 @@
 		logs: [],
 		stepData: {},
 		steps: [],
+		supplementalContext: '',
+		pendingSupplementStepKey: null,
+		autoAdvanceTargetIndex: null,
 		importModuleOrder: [
 			'sources',
 			'facilities',
@@ -50,6 +53,9 @@
 			document.getElementById('tracer-btn-primary').addEventListener('click', 
 				() => this.processNextStep());
 
+			document.getElementById('tracer-btn-supplement').addEventListener('click', 
+				() => this.submitSupplement());
+
 			// Tab switching
 			this.modal.querySelectorAll('.toptour-debug-tracer__tab-btn').forEach(btn => {
 				btn.addEventListener('click', (e) => this.switchTab(e.target.dataset.tab));
@@ -67,8 +73,12 @@
 			this.tracerRunId = null;
 			this.isProcessing = false;
 			this.importResultData = null;
+			this.supplementalContext = '';
+			this.pendingSupplementStepKey = null;
+			this.autoAdvanceTargetIndex = null;
 
 			this.modal.style.display = 'flex';
+			this.hideSupplementPanel();
 			this.updateUI();
 			this.addLog('info', `Trasovač spustený pre úlohu #${taskId}`);
 		},
@@ -153,7 +163,58 @@
 		},
 
 		close() {
+			this.hideSupplementPanel();
 			this.modal.style.display = 'none';
+		},
+
+		showSupplementPanel(message, placeholder, stepKey) {
+			const panel = document.getElementById('tracer-supplement-panel');
+			const messageNode = document.getElementById('tracer-supplement-message');
+			const input = document.getElementById('tracer-supplement-input');
+
+			messageNode.textContent = message;
+			input.placeholder = placeholder;
+			panel.style.display = 'block';
+			this.pendingSupplementStepKey = stepKey;
+			this.switchTab('input');
+			input.focus();
+		},
+
+		hideSupplementPanel() {
+			const panel = document.getElementById('tracer-supplement-panel');
+			const input = document.getElementById('tracer-supplement-input');
+			if (panel) {
+				panel.style.display = 'none';
+			}
+			if (input) {
+				input.value = '';
+			}
+			this.pendingSupplementStepKey = null;
+		},
+
+		submitSupplement() {
+			const input = document.getElementById('tracer-supplement-input');
+			const extraText = (input.value || '').trim();
+
+			if (!extraText) {
+				this.addLog('warning', 'Doplňujúce zadanie je prázdne.');
+				input.focus();
+				return;
+			}
+
+			this.supplementalContext = extraText;
+			this.importResultData = null;
+			this.stepData[1] = null;
+			this.stepData[2] = null;
+			this.stepData[3] = null;
+			document.getElementById('tracer-output-data').textContent = 'Čakám na novú AI odpoveď...';
+			document.getElementById('tracer-photos-grid').innerHTML = '<p>' + this.escapeHtml('Žiadne fotografie') + '</p>';
+			this.hideSupplementPanel();
+			this.currentStep = 1;
+			this.autoAdvanceTargetIndex = 2;
+			this.updateUI();
+			this.addLog('info', 'Doplnenie zadania prijaté. Znovu generujem batch a odosielam ho do AI.');
+			this.processNextStep();
 		},
 
 		addLog(type, message) {
@@ -216,7 +277,7 @@
 		syncActionButtons() {
 			const primaryButton = document.getElementById('tracer-btn-primary');
 
-			if (this.isProcessing || this.currentStep >= this.totalSteps) {
+			if (this.isProcessing || this.currentStep >= this.totalSteps || this.pendingSupplementStepKey) {
 				primaryButton.style.display = 'none';
 				return;
 			}
@@ -237,39 +298,107 @@
 			this.isProcessing = true;
 			this.syncActionButtons();
 			const currentStepMeta = this.steps[this.currentStep] || null;
+			let shouldAutoContinue = false;
 
 			try {
+				let stepResult = null;
 				switch (currentStepMeta?.key) {
 					case 'initialize':
-						await this.stepInitialize();
+						stepResult = await this.stepInitialize();
 						break;
 					case 'generate_batch':
-						await this.stepGenerateBatch();
+						stepResult = await this.stepGenerateBatch();
 						break;
 					case 'process_ai':
-						await this.stepProcessAI();
+						stepResult = await this.stepProcessAI();
 						break;
 					case 'start_import':
-						await this.stepImportResults();
+						stepResult = await this.stepImportResults();
 						break;
 					default:
 						if (currentStepMeta?.moduleKey) {
-							this.showImportModuleSummary(currentStepMeta.moduleKey);
+							stepResult = this.showImportModuleSummary(currentStepMeta.moduleKey);
 						} else {
 							this.addLog('success', 'Všetky kroky boli dokončené!');
 						}
 				}
 
+				const dataState = this.evaluateStepData(currentStepMeta, stepResult);
+				if (!dataState.hasData) {
+					this.showSupplementPanel(dataState.message, dataState.placeholder, currentStepMeta?.key || 'unknown');
+					this.addLog('warning', dataState.message);
+					return;
+				}
+
 				this.currentStep++;
 				this.updateUI();
+				if (this.autoAdvanceTargetIndex !== null && this.currentStep <= this.autoAdvanceTargetIndex) {
+					shouldAutoContinue = true;
+				} else if (this.autoAdvanceTargetIndex !== null && this.currentStep > this.autoAdvanceTargetIndex) {
+					this.autoAdvanceTargetIndex = null;
+				}
 			} catch (error) {
 				this.addLog('error', `Chyba: ${error.message}`);
 				document.getElementById('tracer-status-bar').classList.add('toptour-debug-tracer__status--error');
+				this.autoAdvanceTargetIndex = null;
 				this.syncActionButtons();
 			} finally {
 				this.isProcessing = false;
 				this.syncActionButtons();
 			}
+
+			if (shouldAutoContinue) {
+				return this.processNextStep();
+			}
+		},
+
+		evaluateStepData(stepMeta, stepResult) {
+			const stepKey = stepMeta?.key || '';
+
+			if (stepKey === 'initialize') {
+				return {
+					hasData: !!(stepResult && stepResult.config && Object.keys(stepResult.config).length > 0),
+					message: 'Inicializácia nevrátila konfiguračné dáta. Skontroluj základné nastavenie úlohy a AI Bridge.',
+					placeholder: 'Doplň, čo je cieľ úlohy, aké údaje má AI vyhodnotiť a ktoré zdroje sú kľúčové.'
+				};
+			}
+
+			if (stepKey === 'generate_batch') {
+				return {
+					hasData: !!(stepResult && stepResult.batch_payload && Object.keys(stepResult.batch_payload).length > 0),
+					message: 'Batch nevytvoril zobraziteľné vstupné dáta. Upresni, aké podklady a otázky majú ísť do AI.',
+					placeholder: 'Doplň presnejšiu otázku, požadované zdroje, jazyk alebo konkrétne typy výstupov pre AI.'
+				};
+			}
+
+			if (stepKey === 'process_ai') {
+				const rawResponse = stepResult?.ai_response?.ai?.raw_response || '';
+				const structured = stepResult?.ai_response?.structured_output || {};
+				return {
+					hasData: rawResponse.trim() !== '' || Object.keys(structured).length > 0,
+					message: 'AI krok nevrátil zobraziteľnú odpoveď. Doplň presnejšie zadanie, aby bolo jasné, aký výstup má AI vrátiť.',
+					placeholder: 'Doplň presné otázky pre AI, očakávaný formát odpovede, požadované entity alebo čo presne chýba v odpovedi.'
+				};
+			}
+
+			if (stepKey === 'start_import') {
+				const hasImportMetrics = !!(stepResult?.import_metrics && Object.keys(stepResult.import_metrics).length > 0);
+				return {
+					hasData: hasImportMetrics || (stepResult?.findings?.length || 0) > 0 || (stepResult?.photos?.length || 0) > 0,
+					message: 'Import nenašiel žiadne dáta na zápis. Doplň zadanie tak, aby AI vrátila konkrétne kandidáty alebo zistenia.',
+					placeholder: 'Doplň, aké typy kandidátov majú vzniknúť: zdroje, zistenia, fotodôkazy, destinácie, zariadenia.'
+				};
+			}
+
+			if (stepMeta?.moduleKey) {
+				return {
+					hasData: !!stepResult && typeof stepResult === 'object',
+					message: `Modul ${stepMeta.title} nevrátil žiadnu zmenu. Doplň zadanie tak, aby AI vrátila kandidátov aj pre tento modul.`,
+					placeholder: 'Doplň presnejšie, aké entity má AI nájsť alebo založiť pre tento modul.'
+				};
+			}
+
+			return { hasData: true, message: '', placeholder: '' };
 		},
 
 		showImportModuleSummary(moduleKey) {
@@ -281,10 +410,18 @@
 
 			document.getElementById('tracer-stage-desc').textContent = moduleMeta.description;
 			this.addLog('info', `${moduleMeta.title}: created=${created}, updated=${updated}, errors=${errors}`);
+			document.getElementById('tracer-output-data').textContent = JSON.stringify({
+				module: moduleKey,
+				title: moduleMeta.title,
+				metrics: moduleMetrics
+			}, null, 2);
+			this.switchTab('output');
 
 			if (moduleKey === 'photo_evidence' && this.importResultData?.photos?.length) {
 				this.displayPhotos(this.importResultData.photos);
 			}
+
+			return moduleMetrics;
 		},
 
 		async stepInitialize() {
@@ -316,6 +453,7 @@
 					JSON.stringify(data.config, null, 2);
 
 				this.addLog('success', `Trasovač inicializovaný. Run ID: ${this.tracerRunId}`);
+				return data;
 			} catch (error) {
 				this.addLog('error', `Chyba inicializácie: ${error.message}`);
 				throw error;
@@ -336,7 +474,8 @@
 					},
 					body: JSON.stringify({
 						task_id: this.taskId,
-						tracer_run_id: this.tracerRunId
+						tracer_run_id: this.tracerRunId,
+						supplemental_context: this.supplementalContext
 					})
 				});
 
@@ -355,6 +494,10 @@
 
 				this.addLog('success', `Batch vygenerovaný. ID: ${this.batchId}`);
 				this.addLog('info', `Počet záznamov: ${data.record_count || 0}`);
+				if (this.supplementalContext) {
+					this.addLog('info', 'Batch bol rozšírený o doplňujúce zadanie od manažéra.');
+				}
+				return data;
 			} catch (error) {
 				this.addLog('error', `Chyba generovania batchu: ${error.message}`);
 				throw error;
@@ -389,19 +532,22 @@
 
 				this.stepData[2] = data;
 
-			// Display AI response in Output tab
-			const outputDiv = document.getElementById('tracer-output-data');
-			outputDiv.textContent = JSON.stringify(data.ai_response || {}, null, 2);
+				const outputDiv = document.getElementById('tracer-output-data');
+				const rawResponse = data.ai_response?.ai?.raw_response || '';
+				const normalizedJson = JSON.stringify(data.ai_response || {}, null, 2);
+				outputDiv.textContent = rawResponse.trim() !== ''
+					? `RAW AI RESPONSE\n================\n${rawResponse}\n\nNORMALIZOVANÝ OUTBOX JSON\n========================\n${normalizedJson}`
+					: normalizedJson;
 
-			// Auto-switch to Output tab to show results
-			this.switchTab('output');
+				this.switchTab('output');
 
-			this.addLog('success', 'AI spracovanie dokončené');
-			this.addLog('info', `AI model: ${data.ai_model || 'unknown'}`);
-			this.addLog('info', `Tokeny: ${data.tokens_used || 0}`);
-			if (data.ai_response && data.ai_response.processing_time_ms) {
-				this.addLog('info', `Čas spracovania: ${data.ai_response.processing_time_ms}ms`);
-			}
+				this.addLog('success', 'AI spracovanie dokončené');
+				this.addLog('info', `AI model: ${data.ai_model || 'unknown'}`);
+				this.addLog('info', `Tokeny: ${data.tokens_used || 0}`);
+				if (rawResponse.trim() !== '') {
+					this.addLog('info', `Dĺžka surovej AI odpovede: ${rawResponse.length} znakov`);
+				}
+				return data;
 			} catch (error) {
 				this.addLog('error', `Chyba AI spracovania: ${error.message}`);
 				throw error;
@@ -452,6 +598,8 @@
 				this.addLog('info', `Vytvorené zistenia: ${data.findings_created || 0}`);
 				this.addLog('info', `Vytvorené fotodôkazy: ${data.photos_created || 0}`);
 				this.addLog('info', `Zdroje: ${data.sources_processed || 0}`);
+				document.getElementById('tracer-output-data').textContent = JSON.stringify(data, null, 2);
+				return data;
 			} catch (error) {
 				this.addLog('error', `Chyba importu: ${error.message}`);
 				throw error;

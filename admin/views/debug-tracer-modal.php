@@ -38,6 +38,21 @@ if ( ! current_user_can( 'manage_toptour_references' ) ) {
 				<div class="toptour-debug-tracer__stage-desc" id="tracer-stage-desc"></div>
 			</div>
 
+			<div class="toptour-debug-tracer__supplement" id="tracer-supplement-panel" style="display: none;">
+				<div class="toptour-debug-tracer__supplement-title">
+					<?php esc_html_e( 'Doplnenie zadania pre ďalší pokus', 'toptour-reference-finder' ); ?>
+				</div>
+				<p class="toptour-debug-tracer__supplement-message" id="tracer-supplement-message">
+					<?php esc_html_e( 'Tento krok nevrátil zobraziteľné dáta. Doplň upresnenie zadania.', 'toptour-reference-finder' ); ?>
+				</p>
+				<textarea id="tracer-supplement-input" class="toptour-debug-tracer__supplement-input" rows="4" placeholder="<?php esc_attr_e( 'Doplň presnejšie zadanie, očakávané výstupy, zdroje alebo konkrétne otázky pre AI.', 'toptour-reference-finder' ); ?>"></textarea>
+				<div class="toptour-debug-tracer__supplement-actions">
+					<button id="tracer-btn-supplement" type="button" class="button button-secondary">
+						<?php esc_html_e( 'Znovu spracovať s doplnením', 'toptour-reference-finder' ); ?>
+					</button>
+				</div>
+			</div>
+
 			<!-- Progress Bar -->
 			<div class="toptour-debug-tracer__progress">
 				<div class="toptour-debug-tracer__progress-bar">
@@ -206,6 +221,45 @@ if ( ! current_user_can( 'manage_toptour_references' ) ) {
 	font-size: 14px;
 	color: #666;
 	line-height: 1.6;
+}
+
+.toptour-debug-tracer__supplement {
+	margin-bottom: 20px;
+	padding: 16px;
+	border: 1px solid #dcdcde;
+	border-radius: 6px;
+	background: #fff8e5;
+}
+
+.toptour-debug-tracer__supplement-title {
+	font-size: 14px;
+	font-weight: 600;
+	margin-bottom: 8px;
+	color: #1d2327;
+}
+
+.toptour-debug-tracer__supplement-message {
+	margin: 0 0 10px;
+	font-size: 13px;
+	color: #50575e;
+}
+
+.toptour-debug-tracer__supplement-input {
+	width: 100%;
+	min-height: 96px;
+	padding: 10px 12px;
+	font-size: 13px;
+	border: 1px solid #8c8f94;
+	border-radius: 4px;
+	resize: vertical;
+	box-sizing: border-box;
+	background: #fff;
+}
+
+.toptour-debug-tracer__supplement-actions {
+	margin-top: 10px;
+	display: flex;
+	justify-content: flex-end;
 }
 
 .toptour-debug-tracer__progress {
