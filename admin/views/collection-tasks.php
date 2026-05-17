@@ -805,6 +805,7 @@ if ( $is_task_detail ) {
 						<a class="button button-secondary" href="<?php echo esc_url( $current_task_edit_url ); ?>"><?php esc_html_e( 'Upraviť úlohu', 'toptour-reference-finder' ); ?></a>
 					<?php else : ?>
 						<a class="button button-secondary" href="<?php echo esc_url( add_query_arg( [ 'page' => 'toptour-references-collection', 'toptour_action' => 'add' ], $collection_admin_url ) ); ?>"><?php esc_html_e( 'Pridať úlohu', 'toptour-reference-finder' ); ?></a>
+						<button type="button" class="button button-secondary" onclick="toptourOpenImportModal()"><?php esc_html_e( 'Importovať z textu', 'toptour-reference-finder' ); ?></button>
 					<?php endif; ?>
 				</div>
 			</article>
@@ -1770,6 +1771,11 @@ if ( $is_task_detail ) {
 		</div>
 	</div>
 </div>
+
+<?php
+// Include task text import modal.
+require_once TOPTOUR_REF_PLUGIN_DIR . 'admin/views/import-task-text-modal.php';
+?>
 
 <style>
 .toptour-ai-choice-modal {
