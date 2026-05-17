@@ -349,8 +349,8 @@ class Toptour_Ref_Debug_Tracer_API {
 					'source' => 'YouTube',
 					'finding' => 'Moderné wellness zariadenia',
 				),
-			)
-				'sources' => array(
+			),
+			'sources' => array(
 					array(
 						'url' => 'https://tripadvisor.com/hotel/test',
 						'title' => 'Hotel na TripAdvisor',

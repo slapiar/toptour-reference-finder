@@ -92,6 +92,7 @@ class Toptour_Ref_Loader {
 
 		// Register REST API routes.
 		add_action( 'rest_api_init', array( 'Toptour_Ref_REST_API', 'register_routes' ) );
+		add_action( 'rest_api_init', array( 'Toptour_Ref_Debug_Tracer_API', 'register_routes' ) );
 
 		// Scheduler hook for controlled automatic processing.
 		add_action( 'toptour_ref_process_collection_tasks', array( 'Toptour_Ref_Task_Processor', 'process_scheduled_tasks' ) );
