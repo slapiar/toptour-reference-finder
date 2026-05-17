@@ -621,7 +621,16 @@ class Toptour_Ref_Collection_Task_Resolver {
 			return 0;
 		}
 
-		$photo_url = 'https://example.com/discovery/photo/' . absint( $task_id ) . '/' . absint( $source_id );
+		$source = Toptour_Ref_Reference_Sources::get_source( $source_id );
+		$photo_url = '';
+		if ( $source && ! empty( $source->source_url ) ) {
+			$photo_url = esc_url_raw( (string) $source->source_url );
+		}
+
+		if ( '' === $photo_url ) {
+			return 0;
+		}
+
 		$existing = $wpdb->get_row( $wpdb->prepare( 'SELECT id FROM ' . Toptour_Ref_Photo_Evidence::get_table_name() . ' WHERE related_collection_task_id = %d AND source_id = %d AND evidence_url = %s ORDER BY id DESC LIMIT 1', absint( $task_id ), $source_id, $photo_url ) );
 
 		$photo_data = Toptour_Ref_Photo_Evidence::sanitize_photo_evidence_data(

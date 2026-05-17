@@ -3,6 +3,14 @@
 - Zjednotené verzie naprieč release metadátami po AI hardening zmenách.
 - Synchronizované `@version` v AI moduloch na aktuálnu verziu pluginu `0.2.14`.
 - Potvrdená DB schema verzia `0.2.4` ako konzistentná s tabuľkou `toptour_ref_ai_batch_registry`.
+- Vymazaný fallback na demo photo URL (`https://example.com/discovery/photo/{task_id}/{source_id}`) v discovery resolveri.
+- Photo evidence candidates sa teraz uložia iba ak má zdroj reálnu `source_url`.
+- Sprísňovaná validácia: `evidence_url` je povinné pole a demo URL z `example.com/discovery/photo/` sa odmietne pri ukladaní.
+- Zrušeno riskantné ukladanie placeholder adries do fotodôkazov bez overenia ich existencie.
+- Pridaná striktná detekcia nulových výsledkov v traceri: krok `process_ai` s follow-up signálom ide do doplnenia, krok `import` s 0 nálezmi zastaví proces.
+- Pridaný čitateľný panel „Vstup do AI" v traceri zobrazujúci question, constraints a context z generovaného batchu.
+- Doplňujúci dialóg má výrazný červený banner a automaticky prepína status bar do error stavu pri nulovom náleze.
+- Tracer automaticky prepne status bar do error stavu pri zobrazení supplement panelu a obnoví ho po zatvorení.
 
 ## 0.2.13
 - Pridané file-claim spracovanie pre AI inbox/outbox (`.processing`) na zamedzenie súbežného spracovania rovnakého súboru.

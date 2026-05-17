@@ -314,8 +314,15 @@ class Toptour_Ref_Photo_Evidence {
 			$errors[] = 'invalid related_collection_task_id';
 		}
 
+		if ( $data['evidence_url'] === '' ) {
+			$errors[] = 'evidence_url is required';
+		}
+
+		if ( $data['evidence_url'] !== '' && false !== strpos( $data['evidence_url'], 'example.com/discovery/photo/' ) ) {
+			$errors[] = 'demo evidence_url is not allowed';
+		}
+
 		$url_fields = [
-			[ 'raw' => 'evidence_url_raw', 'san' => 'evidence_url', 'msg' => 'invalid evidence_url' ],
 			[ 'raw' => 'thumbnail_url_raw', 'san' => 'thumbnail_url', 'msg' => 'invalid thumbnail_url' ],
 			[ 'raw' => 'official_reference_url_raw', 'san' => 'official_reference_url', 'msg' => 'invalid official_reference_url' ],
 			[ 'raw' => 'guest_reference_url_raw', 'san' => 'guest_reference_url', 'msg' => 'invalid guest_reference_url' ],
