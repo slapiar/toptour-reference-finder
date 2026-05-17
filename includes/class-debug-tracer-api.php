@@ -295,7 +295,15 @@ class Toptour_Ref_Debug_Tracer_API {
 			);
 		}
 
+		$paths = Toptour_Ref_AI_Bridge::get_paths();
+		$pending_inbox = trailingslashit( $paths['inbox_dir'] ) . sanitize_file_name( $batch_id ) . '.json';
 		$existing_outbox = self::find_outbox_file_for_batch( $batch_id );
+
+		// If inbox still exists for this batch, force a fresh bridge pass to avoid stale outbox reuse.
+		if ( file_exists( $pending_inbox ) ) {
+			$existing_outbox = '';
+		}
+
 		if ( '' === $existing_outbox ) {
 			$bridge_result = Toptour_Ref_AI_Bridge::process_pending_batches( max( 10, absint( $settings['ai_batch_limit'] ?? 1 ) ) );
 

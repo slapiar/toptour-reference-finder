@@ -162,7 +162,7 @@ class Toptour_Ref_AI_Bridge {
 		$paths = self::get_paths();
 		self::ensure_directories();
 
-		$batch_id = 'task-' . $task_id . '-' . gmdate( 'YmdHis' );
+		$batch_id = self::build_batch_id( $task_id );
 
 		$analysis = Toptour_Ref_Collection_Task_Resolver::analyze_task( $task );
 		$query_seeds = is_array( $analysis['search_queries'] ?? null ) ? array_values( array_filter( array_map( 'sanitize_text_field', (array) $analysis['search_queries'] ) ) ) : [];
@@ -241,7 +241,20 @@ class Toptour_Ref_AI_Bridge {
 			return [ 'ok' => false, 'message' => 'Súbor sa nepodarilo zapísať do inbox_dir.' ];
 		}
 
-		return [ 'ok' => true, 'message' => 'Batch vygenerovaný.', 'filename' => $filename ];
+		return [
+			'ok' => true,
+			'message' => 'Batch vygenerovaný.',
+			'filename' => $filename,
+			'batch_id' => $batch_id,
+		];
+	}
+
+	private static function build_batch_id( $task_id ) {
+		$task_id = absint( $task_id );
+		$time_part = gmdate( 'YmdHis' );
+		$rand_part = strtolower( wp_generate_password( 8, false, false ) );
+
+		return sanitize_file_name( sprintf( 'task-%d-%s-%s', $task_id, $time_part, $rand_part ) );
 	}
 
 	private static function normalize_text_for_prompt( $text ) {
@@ -381,10 +394,12 @@ class Toptour_Ref_AI_Bridge {
 				'batch_id' => sanitize_text_field( (string) ( $payload['batch_id'] ?? '' ) ),
 				'task_id' => absint( $payload['task_id'] ?? 0 ),
 				'question' => $question,
+				'constraints' => sanitize_textarea_field( (string) ( $payload['constraints'] ?? '' ) ),
+				'context' => is_array( $payload['context'] ?? null ) ? $payload['context'] : array(),
 			],
 			'ai' => [
 				'model' => sanitize_text_field( (string) ( $settings['ai_model'] ?? '' ) ),
-				'raw_response' => sanitize_textarea_field( (string) ( $openai['content'] ?? '' ) ),
+				'raw_response' => (string) ( $openai['content'] ?? '' ),
 			],
 			'structured_output' => $structured,
 		];
@@ -562,6 +577,8 @@ class Toptour_Ref_AI_Bridge {
 				'batch_id' => sanitize_text_field( (string) ( $payload['batch_id'] ?? '' ) ),
 				'task_id' => absint( $payload['task_id'] ?? 0 ),
 				'question' => sanitize_textarea_field( (string) ( $payload['question'] ?? '' ) ),
+				'constraints' => sanitize_textarea_field( (string) ( $payload['constraints'] ?? '' ) ),
+				'context' => is_array( $payload['context'] ?? null ) ? $payload['context'] : array(),
 			],
 			'error' => sanitize_text_field( $message ),
 			'structured_output' => [
@@ -681,6 +698,8 @@ class Toptour_Ref_AI_Bridge {
 			'batch_id' => sanitize_text_field( (string) ( $payload['input']['batch_id'] ?? '' ) ),
 			'task_id' => absint( $payload['input']['task_id'] ?? 0 ),
 			'question' => sanitize_textarea_field( (string) ( $payload['input']['question'] ?? '' ) ),
+			'constraints' => sanitize_textarea_field( (string) ( $payload['input']['constraints'] ?? '' ) ),
+			'context' => is_array( $payload['input']['context'] ?? null ) ? $payload['input']['context'] : array(),
 		];
 
 		if ( '' === $normalized['input']['question'] ) {
@@ -692,7 +711,7 @@ class Toptour_Ref_AI_Bridge {
 
 		$normalized['ai'] = is_array( $payload['ai'] ?? null ) ? [
 			'model' => sanitize_text_field( (string) ( $payload['ai']['model'] ?? '' ) ),
-			'raw_response' => sanitize_textarea_field( (string) ( $payload['ai']['raw_response'] ?? '' ) ),
+			'raw_response' => (string) ( $payload['ai']['raw_response'] ?? '' ),
 		] : [];
 
 		if ( empty( $payload['structured_output'] ) || ! is_array( $payload['structured_output'] ) ) {
@@ -742,6 +761,10 @@ class Toptour_Ref_AI_Bridge {
 			'follow_up_question' => sanitize_textarea_field( (string) ( $structured['follow_up_question'] ?? '' ) ),
 			'candidate_sources' => self::normalize_candidate_sources( $structured['candidate_sources'] ?? [] ),
 			'candidate_facilities' => self::normalize_candidate_facilities( $structured['candidate_facilities'] ?? [] ),
+			'candidate_destinations' => self::normalize_generic_candidate_rows( $structured['candidate_destinations'] ?? [] ),
+			'candidate_points_of_interest' => self::normalize_generic_candidate_rows( $structured['candidate_points_of_interest'] ?? [] ),
+			'candidate_contacts' => self::normalize_generic_candidate_rows( $structured['candidate_contacts'] ?? [] ),
+			'candidate_interests' => self::normalize_generic_candidate_rows( $structured['candidate_interests'] ?? [] ),
 			'pending_findings' => self::normalize_pending_findings( $structured['pending_findings'] ?? [] ),
 			'photo_evidence_candidates' => self::normalize_photo_candidates( $structured['photo_evidence_candidates'] ?? [] ),
 			'import_notes' => self::normalize_import_notes( $structured['import_notes'] ?? [] ),
@@ -885,6 +908,59 @@ class Toptour_Ref_AI_Bridge {
 		}
 
 		return array_values( array_unique( $normalized ) );
+	}
+
+	private static function normalize_generic_candidate_rows( $rows ) {
+		if ( ! is_array( $rows ) ) {
+			return [];
+		}
+
+		$normalized = [];
+		foreach ( $rows as $row ) {
+			if ( ! is_array( $row ) ) {
+				continue;
+			}
+			$normalized[] = self::sanitize_json_value( $row );
+		}
+
+		return $normalized;
+	}
+
+	private static function sanitize_json_value( $value ) {
+		if ( is_array( $value ) ) {
+			$sanitized = [];
+			foreach ( $value as $key => $item ) {
+				if ( is_int( $key ) ) {
+					$sanitized[ $key ] = self::sanitize_json_value( $item );
+					continue;
+				}
+				$sanitized_key = sanitize_key( (string) $key );
+				if ( '' === $sanitized_key ) {
+					continue;
+				}
+				$sanitized[ $sanitized_key ] = self::sanitize_json_value( $item );
+			}
+
+			return $sanitized;
+		}
+
+		if ( is_bool( $value ) ) {
+			return (bool) $value;
+		}
+
+		if ( is_int( $value ) ) {
+			return (int) $value;
+		}
+
+		if ( is_float( $value ) ) {
+			return (float) $value;
+		}
+
+		if ( null === $value ) {
+			return '';
+		}
+
+		return sanitize_textarea_field( (string) $value );
 	}
 
 	private static function get_dir_file_count( $dir ) {
