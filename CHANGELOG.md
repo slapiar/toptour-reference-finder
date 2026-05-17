@@ -11,6 +11,11 @@
 - Pridaný čitateľný panel „Vstup do AI" v traceri zobrazujúci question, constraints a context z generovaného batchu.
 - Doplňujúci dialóg má výrazný červený banner a automaticky prepína status bar do error stavu pri nulovom náleze.
 - Tracer automaticky prepne status bar do error stavu pri zobrazení supplement panelu a obnoví ho po zatvorení.
+- Opravená validácia kroku `process_ai`: ak AI vráti `needs_follow_up`, ale zároveň obsahuje kandidátov (napr. `candidate_destinations`), tracer pokračuje do importu namiesto zastavenia ako nulový nález.
+- Pridané bezpečnostné kontroly zhody `batch_id`/`task_id` medzi požiadavkou a outbox payloadom; pri nesúlade sa proces zastaví s diagnostikou namiesto tichého použitia cudzieho výstupu.
+- Pridané automatické čistenie AI tracer súborov (`inbox`, `outbox`, `archive`, `error`) pri `Zrušiť`/`Zavrieť`, po dokončení importu aj po úplnom dokončení tracer workflow.
+- Tracer výstup teraz zobrazuje identitu spracovania (`AKTÍVNY BATCH`, `BATCH V OUTBOX`, `OUTBOX FILE`, `GENERATED AT`) a loguje počet kandidátov naprieč modulmi pre rýchlu diagnostiku.
+- Resolver dopĺňa smerné ukazovatele aj z naviazaných task entít (`destination_id`, `supplier_id`, `offer_id`) a prenáša ich do AI contextu/constraints ako directional signals (interests, POI, lokality, platform hints).
 
 ## 0.2.13
 - Pridané file-claim spracovanie pre AI inbox/outbox (`.processing`) na zamedzenie súbežného spracovania rovnakého súboru.
