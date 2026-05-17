@@ -99,12 +99,8 @@ if ( ! current_user_can( 'manage_toptour_references' ) ) {
 			</div>
 
 			<div class="toptour-debug-tracer__actions">
-				<button id="tracer-btn-process" type="button" class="button button-primary" style="display: none;">
-					<?php esc_html_e( 'Spracovať AI Inbox teraz', 'toptour-reference-finder' ); ?>
-				</button>
-
-				<button id="tracer-btn-continue" type="button" class="button button-primary" style="display: none;">
-					<?php esc_html_e( 'Pokračovať', 'toptour-reference-finder' ); ?>
+				<button id="tracer-btn-primary" type="button" class="button button-primary" style="display: none;">
+					<?php esc_html_e( 'Spustiť trasovanie', 'toptour-reference-finder' ); ?>
 				</button>
 
 				<button id="tracer-btn-cancel" type="button" class="button">

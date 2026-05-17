@@ -34,12 +34,8 @@
 			document.getElementById('tracer-btn-cancel').addEventListener('click', 
 				() => this.close());
 
-			// Process button
-			document.getElementById('tracer-btn-process').addEventListener('click', 
-				() => this.processNextStep());
-
-			// Continue button
-			document.getElementById('tracer-btn-continue').addEventListener('click', 
+			// Primary action button
+			document.getElementById('tracer-btn-primary').addEventListener('click', 
 				() => this.processNextStep());
 
 			// Tab switching
@@ -61,7 +57,6 @@
 			this.modal.style.display = 'flex';
 			this.updateUI();
 			this.addLog('info', `Trasovač spustený pre úlohu #${taskId}`);
-			this.showProcessButton();
 		},
 
 		close() {
@@ -111,6 +106,7 @@
 
 			// Status
 			this.updateStatus();
+			this.syncActionButtons();
 		},
 
 		updateStatus() {
@@ -129,20 +125,29 @@
 			document.getElementById('tracer-status-text').textContent = status;
 		},
 
-		showProcessButton() {
-			document.getElementById('tracer-btn-process').style.display = 'block';
-			document.getElementById('tracer-btn-continue').style.display = 'none';
-		},
+		syncActionButtons() {
+			const primaryButton = document.getElementById('tracer-btn-primary');
 
-		showContinueButton() {
-			document.getElementById('tracer-btn-process').style.display = 'none';
-			document.getElementById('tracer-btn-continue').style.display = 'block';
+			if (this.isProcessing || this.currentStep >= this.totalSteps) {
+				primaryButton.style.display = 'none';
+				return;
+			}
+
+			if (this.currentStep === 0) {
+				primaryButton.textContent = 'Spustiť trasovanie';
+				primaryButton.style.display = 'inline-block';
+				return;
+			}
+
+			primaryButton.textContent = 'Pokračovať';
+			primaryButton.style.display = 'inline-block';
 		},
 
 		async processNextStep() {
 			if (this.isProcessing) return;
 
 			this.isProcessing = true;
+			this.syncActionButtons();
 
 			try {
 				switch (this.currentStep) {
@@ -163,14 +168,14 @@
 				}
 
 				this.currentStep++;
-						this.showContinueButton();
 				this.updateUI();
 			} catch (error) {
 				this.addLog('error', `Chyba: ${error.message}`);
 				document.getElementById('tracer-status-bar').classList.add('toptour-debug-tracer__status--error');
-					this.showProcessButton();
+				this.syncActionButtons();
 			} finally {
 				this.isProcessing = false;
+				this.syncActionButtons();
 			}
 		},
 
