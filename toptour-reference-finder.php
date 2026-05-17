@@ -3,7 +3,7 @@
  * Plugin Name: TOPTOUR Reference Finder
  * Plugin URI: https://toptour.sk
  * Description: Internal TOPTOUR plugin for collecting real guest references, review findings, source links and photo evidence before any later evaluation logic.
- * Version: 1.0.9
+ * Version: 1.1.0
  * Author: TOPTOUR
  * Author URI: https://toptour.sk
  * Text Domain: toptour-reference-finder
@@ -14,7 +14,7 @@
  * Requires PHP: 7.4
  *
  * @package Toptour_Ref
- * @version 1.0.9
+ * @version 1.1.0
  */
 
 // Exit if accessed directly.
@@ -23,11 +23,11 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 // Define plugin constants.
-define( 'TOPTOUR_REF_VERSION', '1.0.9' );
+define( 'TOPTOUR_REF_VERSION', '1.1.0' );
 define( 'TOPTOUR_REF_PLUGIN_FILE', __FILE__ );
 define( 'TOPTOUR_REF_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'TOPTOUR_REF_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
-define( 'TOPTOUR_REF_DB_VERSION', '1.0.0' );
+define( 'TOPTOUR_REF_DB_VERSION', '1.1.0' );
 
 /**
  * Load the main loader class.
