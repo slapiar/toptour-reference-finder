@@ -17,6 +17,18 @@
 		isProcessing: false,
 		logs: [],
 		stepData: {},
+		steps: [],
+		importModuleOrder: [
+			'sources',
+			'facilities',
+			'destinations',
+			'points_of_interest',
+			'contacts',
+			'interests',
+			'findings',
+			'photo_evidence'
+		],
+		importResultData: null,
 
 		init() {
 			this.modal = document.getElementById('toptour-debug-tracer-modal');
@@ -47,16 +59,97 @@
 		open(taskId) {
 			this.taskId = taskId;
 			this.currentStep = 0;
-			this.totalSteps = 4; // 1. Generate, 2. Validate, 3. Process, 4. Import
+			this.steps = this.buildSteps();
+			this.totalSteps = this.steps.length;
 			this.logs = [];
 			this.stepData = {};
 			this.batchId = null;
 			this.tracerRunId = null;
 			this.isProcessing = false;
+			this.importResultData = null;
 
 			this.modal.style.display = 'flex';
 			this.updateUI();
 			this.addLog('info', `Trasovač spustený pre úlohu #${taskId}`);
+		},
+
+		buildSteps() {
+			const baseSteps = [
+				{
+					key: 'initialize',
+					title: 'Inicializácia',
+					description: 'Príprava trasovacieho prostredia a načítavanie konfigurácie.'
+				},
+				{
+					key: 'generate_batch',
+					title: 'Generovanie batchu',
+					description: 'Zber vstupných dát a zostavenie batch payloadu pre AI.'
+				},
+				{
+					key: 'process_ai',
+					title: 'Spracovanie AI',
+					description: 'Odoslanie batchu do AI a prevzatie štruktúrovaného výstupu.'
+				},
+				{
+					key: 'start_import',
+					title: 'Spustenie importu',
+					description: 'Spustenie importera, ktorý rozloží AI výstup do interných modulov.'
+				}
+			];
+
+			const importSteps = this.importModuleOrder.map((moduleKey) => {
+				const meta = this.getImportModuleMeta(moduleKey);
+				return {
+					key: `module_${moduleKey}`,
+					title: meta.title,
+					description: meta.description,
+					moduleKey
+				};
+			});
+
+			return baseSteps.concat(importSteps);
+		},
+
+		getImportModuleMeta(moduleKey) {
+			const meta = {
+				sources: {
+					title: 'Import zdrojov',
+					description: 'Mapovanie kandidátnych zdrojov do modulu Reference Sources.'
+				},
+				facilities: {
+					title: 'Import zariadení',
+					description: 'Spracovanie kandidátnych zariadení a ich aktualizácií.'
+				},
+				destinations: {
+					title: 'Import destinácií',
+					description: 'Spracovanie kandidátnych destinácií z AI odpovede.'
+				},
+				points_of_interest: {
+					title: 'Import bodov záujmu',
+					description: 'Import kandidátnych bodov záujmu a ich väzieb.'
+				},
+				contacts: {
+					title: 'Import kontaktov',
+					description: 'Spracovanie kandidátnych kontaktov a vzťahov.'
+				},
+				interests: {
+					title: 'Import záujmov',
+					description: 'Import kandidátnych záujmov odvodených z AI dát.'
+				},
+				findings: {
+					title: 'Import zistení',
+					description: 'Zápis pending findings a previazaní na zdroje.'
+				},
+				photo_evidence: {
+					title: 'Import fotodôkazov',
+					description: 'Zápis photo evidence kandidátov a previazaní na zistenia.'
+				}
+			};
+
+			return meta[moduleKey] || {
+				title: moduleKey,
+				description: 'Import modulových dát.'
+			};
 		},
 
 		close() {
@@ -110,19 +203,14 @@
 		},
 
 		updateStatus() {
-			const steps = [
-				'Inicializácia',
-				'Generovanie batchu',
-				'Spracovanie AI',
-				'Import výsledkov'
-			];
-
-			const status = this.currentStep < steps.length 
-				? steps[this.currentStep] 
-				: 'Hotovo';
+			const currentStepMeta = this.steps[this.currentStep] || null;
+			const status = currentStepMeta ? currentStepMeta.title : 'Hotovo';
 
 			document.getElementById('tracer-stage-title').textContent = status;
 			document.getElementById('tracer-status-text').textContent = status;
+			if (currentStepMeta) {
+				document.getElementById('tracer-stage-desc').textContent = currentStepMeta.description;
+			}
 		},
 
 		syncActionButtons() {
@@ -148,23 +236,28 @@
 
 			this.isProcessing = true;
 			this.syncActionButtons();
+			const currentStepMeta = this.steps[this.currentStep] || null;
 
 			try {
-				switch (this.currentStep) {
-					case 0:
+				switch (currentStepMeta?.key) {
+					case 'initialize':
 						await this.stepInitialize();
 						break;
-					case 1:
+					case 'generate_batch':
 						await this.stepGenerateBatch();
 						break;
-					case 2:
+					case 'process_ai':
 						await this.stepProcessAI();
 						break;
-					case 3:
+					case 'start_import':
 						await this.stepImportResults();
 						break;
 					default:
-						this.addLog('success', 'Všetky kroky boli dokončené!');
+						if (currentStepMeta?.moduleKey) {
+							this.showImportModuleSummary(currentStepMeta.moduleKey);
+						} else {
+							this.addLog('success', 'Všetky kroky boli dokončené!');
+						}
 				}
 
 				this.currentStep++;
@@ -176,6 +269,21 @@
 			} finally {
 				this.isProcessing = false;
 				this.syncActionButtons();
+			}
+		},
+
+		showImportModuleSummary(moduleKey) {
+			const moduleMetrics = this.importResultData?.module_metrics?.[moduleKey] || {};
+			const moduleMeta = this.getImportModuleMeta(moduleKey);
+			const created = Number(moduleMetrics.created || 0);
+			const updated = Number(moduleMetrics.updated || 0);
+			const errors = Number(moduleMetrics.errors || 0);
+
+			document.getElementById('tracer-stage-desc').textContent = moduleMeta.description;
+			this.addLog('info', `${moduleMeta.title}: created=${created}, updated=${updated}, errors=${errors}`);
+
+			if (moduleKey === 'photo_evidence' && this.importResultData?.photos?.length) {
+				this.displayPhotos(this.importResultData.photos);
 			}
 		},
 
@@ -327,6 +435,7 @@
 				if (!data.success) throw new Error(data.message || 'Import zlyhalo');
 
 				this.stepData[3] = data;
+				this.importResultData = data;
 
 				// Load photos if available
 				if (data.photos && data.photos.length > 0) {
@@ -334,6 +443,12 @@
 				}
 
 				this.addLog('success', 'Import dokončený');
+				if (data.import_message) {
+					this.addLog('info', data.import_message);
+				}
+				if (data.import_metrics) {
+					this.addLog('info', `Import sumár: found=${data.import_metrics.found_count || 0}, new=${data.import_metrics.new_count || 0}, updated=${data.import_metrics.duplicate_count || 0}, errors=${data.import_metrics.error_count || 0}`);
+				}
 				this.addLog('info', `Vytvorené zistenia: ${data.findings_created || 0}`);
 				this.addLog('info', `Vytvorené fotodôkazy: ${data.photos_created || 0}`);
 				this.addLog('info', `Zdroje: ${data.sources_processed || 0}`);
@@ -415,6 +530,15 @@
 			}
 			
 			return nonce;
+		},
+
+		escapeHtml(value) {
+			return String(value)
+				.replace(/&/g, '&amp;')
+				.replace(/</g, '&lt;')
+				.replace(/>/g, '&gt;')
+				.replace(/"/g, '&quot;')
+				.replace(/'/g, '&#039;');
 		}
 	};
 

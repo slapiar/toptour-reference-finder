@@ -402,6 +402,21 @@ class Toptour_Ref_Debug_Tracer_API {
 
 		// Run the actual import process
 		$import_result = Toptour_Ref_AI_Outbox_Importer::process_pending_outbox( 1 );
+		$latest_report = array();
+		$reports = Toptour_Ref_AI_Outbox_Importer::get_import_reports( 10 );
+
+		if ( is_array( $reports ) ) {
+			foreach ( $reports as $report ) {
+				if ( ! is_array( $report ) ) {
+					continue;
+				}
+
+				if ( absint( $report['task_id'] ?? 0 ) === $task_id ) {
+					$latest_report = $report;
+					break;
+				}
+			}
+		}
 
 		// Collect created records
 		$findings = array();
@@ -439,6 +454,9 @@ class Toptour_Ref_Debug_Tracer_API {
 			array(
 				'success' => true,
 				'batch_id' => $batch_id,
+				'import_message' => $latest_report['message'] ?? ( $import_result['message'] ?? '' ),
+				'import_metrics' => is_array( $latest_report['metrics'] ?? null ) ? $latest_report['metrics'] : array(),
+				'module_metrics' => is_array( $latest_report['module_metrics'] ?? null ) ? $latest_report['module_metrics'] : array(),
 				'findings_created' => count( (array) $findings ),
 				'photos_created' => count( $photos ),
 				'sources_processed' => $import_result['processed'] ?? 0,
