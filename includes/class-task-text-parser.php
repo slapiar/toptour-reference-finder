@@ -82,7 +82,7 @@ class Toptour_Ref_Task_Text_Parser {
 	}
 
 	/**
-	 * Extract sections from text.
+	 * Extract sections from text using line-by-line parsing.
 	 *
 	 * @param string $text Raw text input.
 	 * @return array Sections indexed by marker, or empty if incomplete.
@@ -94,14 +94,36 @@ class Toptour_Ref_Task_Text_Parser {
 		// Normalize line endings.
 		$text = str_replace( "\r\n", "\n", $text );
 
-		foreach ( self::SECTION_MARKERS as $marker ) {
-			$pattern = '/^' . preg_quote( $marker, '/' ) . '\s*\n(.*?)(?=\n(?:' . implode( '|', array_map( 'preg_quote', self::SECTION_MARKERS, array_fill( 0, count( self::SECTION_MARKERS ), '/' ) ) ) . ')\s*\n|$)/s';
-			if ( preg_match( $pattern, $text, $matches ) ) {
-				$sections[ $marker ] = trim( $matches[1] );
+		// Split into lines.
+		$lines = explode( "\n", $text );
+
+		$current_section = null;
+		$current_content = [];
+
+		foreach ( $lines as $line ) {
+			$trimmed = trim( $line );
+
+			// Check if this line is a section marker.
+			if ( in_array( $trimmed, self::SECTION_MARKERS, true ) ) {
+				// Save previous section if it exists.
+				if ( $current_section && ! empty( $current_content ) ) {
+					$sections[ $current_section ] = trim( implode( "\n", $current_content ) );
+				}
+
+				$current_section = $trimmed;
+				$current_content = [];
+			} elseif ( $current_section ) {
+				// Accumulate content for current section.
+				$current_content[] = $line;
 			}
 		}
 
-		// Return only if all sections present.
+		// Save the last section.
+		if ( $current_section && ! empty( $current_content ) ) {
+			$sections[ $current_section ] = trim( implode( "\n", $current_content ) );
+		}
+
+		// Return only if all sections are present.
 		return count( $sections ) === count( self::SECTION_MARKERS ) ? $sections : [];
 	}
 
