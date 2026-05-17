@@ -82,6 +82,35 @@ class Toptour_Ref_AI_Bridge {
 			if ( ! is_dir( $dir ) ) {
 				wp_mkdir_p( $dir );
 			}
+			self::ensure_no_cache_rules( $dir );
+		}
+	}
+
+	private static function ensure_no_cache_rules( $dir ) {
+		$dir = (string) $dir;
+		if ( '' === $dir || ! is_dir( $dir ) || ! is_writable( $dir ) ) {
+			return;
+		}
+
+		$htaccess_path = trailingslashit( $dir ) . '.htaccess';
+		$rules = "# TOPTOUR Reference Finder AI directories - disable cache\n"
+			. "<IfModule LiteSpeed>\n"
+			. "CacheDisable public /\n"
+			. "</IfModule>\n"
+			. "<IfModule mod_headers.c>\n"
+			. "Header set Cache-Control \"no-store, no-cache, must-revalidate, max-age=0\"\n"
+			. "Header set Pragma \"no-cache\"\n"
+			. "Header set Expires \"0\"\n"
+			. "Header set X-LiteSpeed-Cache-Control \"no-cache\"\n"
+			. "</IfModule>\n";
+
+		$current = '';
+		if ( file_exists( $htaccess_path ) ) {
+			$current = (string) file_get_contents( $htaccess_path );
+		}
+
+		if ( false === strpos( $current, 'TOPTOUR Reference Finder AI directories - disable cache' ) ) {
+			@file_put_contents( $htaccess_path, $rules );
 		}
 	}
 

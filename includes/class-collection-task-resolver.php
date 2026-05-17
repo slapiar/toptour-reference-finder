@@ -116,6 +116,18 @@ class Toptour_Ref_Collection_Task_Resolver {
 
 	public static function detect_destination_candidate( $text ) {
 		$text_lc = self::normalize_text( $text );
+		if ( false !== strpos( $text_lc, 'oludeniz' ) || false !== strpos( $text_lc, 'oludeníz' ) ) {
+			return 'Oludeniz';
+		}
+		if ( false !== strpos( $text_lc, 'fethiye' ) || false !== strpos( $text_lc, 'fetiye' ) || false !== strpos( $text_lc, 'fetyie' ) ) {
+			return 'Fethiye';
+		}
+		if ( false !== strpos( $text_lc, 'dalaman' ) ) {
+			return 'Dalaman';
+		}
+		if ( false !== strpos( $text_lc, 'turecko' ) || false !== strpos( $text_lc, 'turkey' ) || false !== strpos( $text_lc, 'turkiye' ) ) {
+			return 'Turecko';
+		}
 		if ( false !== strpos( $text_lc, 'slovensko' ) || false !== strpos( $text_lc, 'slovakia' ) || false !== strpos( $text_lc, 'na slovensku' ) ) {
 			return 'Slovensko';
 		}
@@ -343,7 +355,10 @@ class Toptour_Ref_Collection_Task_Resolver {
 			];
 		}
 
-		$destination_label = $destination !== '' ? $destination : ( ! empty( $analysis['destination_candidate'] ) ? sanitize_text_field( $analysis['destination_candidate'] ) : 'Slovensko' );
+		$destination_label = $destination !== '' ? $destination : ( ! empty( $analysis['destination_candidate'] ) ? sanitize_text_field( $analysis['destination_candidate'] ) : '' );
+		if ( '' === $destination_label ) {
+			return [];
+		}
 		$focus = $facility !== '' ? strtolower( sanitize_text_field( $facility ) ) : 'hotel resort';
 
 		$seeds = [

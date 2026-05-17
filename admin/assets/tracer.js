@@ -33,6 +33,7 @@
 			'photo_evidence'
 		],
 		importResultData: null,
+		cacheDiagnostics: {},
 
 		init() {
 			this.modal = document.getElementById('toptour-debug-tracer-modal');
@@ -74,6 +75,7 @@
 			this.tracerRunId = null;
 			this.isProcessing = false;
 			this.importResultData = null;
+			this.cacheDiagnostics = {};
 			this.supplementalContext = '';
 			this.supplementalHistory = [];
 			this.pendingSupplementStepKey = null;
@@ -472,12 +474,16 @@
 			try {
 				const response = await fetch(this._getRestUrl('tracer/initialize'), {
 					method: 'POST',
+					cache: 'no-store',
 					headers: {
 						'Content-Type': 'application/json',
 						'X-WP-Nonce': this._getNonce(),
+						'Cache-Control': 'no-cache',
+						'Pragma': 'no-cache',
 					},
 					body: JSON.stringify({ task_id: this.taskId })
 				});
+				this.recordCacheStatus('initialize', response);
 
 				if (!response.ok) {
 					throw new Error(`HTTP ${response.status}: ${response.statusText}`);
@@ -508,9 +514,12 @@
 			try {
 				const response = await fetch(this._getRestUrl('tracer/generate-batch'), {
 					method: 'POST',
+					cache: 'no-store',
 					headers: {
 						'Content-Type': 'application/json',
 						'X-WP-Nonce': this._getNonce(),
+						'Cache-Control': 'no-cache',
+						'Pragma': 'no-cache',
 					},
 					body: JSON.stringify({
 						task_id: this.taskId,
@@ -519,6 +528,7 @@
 						supplemental_history: this.supplementalHistory
 					})
 				});
+				this.recordCacheStatus('generate_batch', response);
 
 				if (!response.ok) {
 					throw new Error(`HTTP ${response.status}: ${response.statusText}`);
@@ -556,9 +566,12 @@
 			try {
 				const response = await fetch(this._getRestUrl('tracer/process-ai'), {
 					method: 'POST',
+					cache: 'no-store',
 					headers: {
 						'Content-Type': 'application/json',
 						'X-WP-Nonce': this._getNonce(),
+						'Cache-Control': 'no-cache',
+						'Pragma': 'no-cache',
 					},
 					body: JSON.stringify({
 						task_id: this.taskId,
@@ -566,6 +579,7 @@
 						tracer_run_id: this.tracerRunId
 					})
 				});
+				this.recordCacheStatus('process_ai', response);
 
 				if (!response.ok) {
 					throw new Error(`HTTP ${response.status}: ${response.statusText}`);
@@ -592,7 +606,8 @@
 					`AKTÍVNA ÚLOHA (UI): ${this.taskId || 0}`,
 					`ÚLOHA V OUTBOX: ${returnedTask || 0}`,
 					`OUTBOX FILE: ${data.outbox_file || 'N/A'}`,
-					`GENERATED AT: ${data.generated_at || 'N/A'}`
+					`GENERATED AT: ${data.generated_at || 'N/A'}`,
+					`CACHE: ${this.formatCacheSummary(this.cacheDiagnostics.process_ai)}`
 				].join('\n');
 				outputDiv.textContent = rawResponse.trim() !== ''
 					? `${metaHeader}\n\nRAW AI RESPONSE\n================\n${rawResponse}\n\nNORMALIZOVANÝ OUTBOX JSON\n========================\n${normalizedJson}`
@@ -627,9 +642,12 @@
 			try {
 				const response = await fetch(this._getRestUrl('tracer/import-results'), {
 					method: 'POST',
+					cache: 'no-store',
 					headers: {
 						'Content-Type': 'application/json',
 						'X-WP-Nonce': this._getNonce(),
+						'Cache-Control': 'no-cache',
+						'Pragma': 'no-cache',
 					},
 					body: JSON.stringify({
 						task_id: this.taskId,
@@ -637,6 +655,7 @@
 						tracer_run_id: this.tracerRunId
 					})
 				});
+				this.recordCacheStatus('import_results', response);
 
 				if (!response.ok) {
 					throw new Error(`HTTP ${response.status}: ${response.statusText}`);
@@ -787,10 +806,44 @@
 			return candidateKeys.reduce((sum, key) => {
 				const value = structured[key];
 				if (Array.isArray(value)) {
-					return sum + value.length;
+					const meaningfulCount = value.filter((item) => this.isMeaningfulCandidate(key, item)).length;
+					return sum + meaningfulCount;
 				}
 				return sum;
 			}, 0);
+		},
+
+		isMeaningfulCandidate(key, row) {
+			if (!row || typeof row !== 'object') {
+				return false;
+			}
+
+			const stringValue = (value) => String(value || '').trim();
+			const numberValue = (value) => Number(value || 0);
+
+			switch (key) {
+				case 'candidate_sources':
+					return stringValue(row.url) !== '' || stringValue(row.title) !== '';
+				case 'candidate_facilities':
+					return numberValue(row.facility_id) > 0 || stringValue(row.name) !== '';
+				case 'candidate_destinations':
+					return numberValue(row.destination_id) > 0 || stringValue(row.name) !== '';
+				case 'candidate_points_of_interest': {
+					const hasEntityLink = numberValue(row.destination_id) > 0 || numberValue(row.facility_id) > 0;
+					const hasLocationHint = stringValue(row.country) !== '' || stringValue(row.region) !== '' || stringValue(row.city) !== '' || stringValue(row.address) !== '';
+					return hasEntityLink || hasLocationHint;
+				}
+				case 'candidate_contacts':
+					return numberValue(row.contact_id) > 0 || stringValue(row.display_name) !== '' || stringValue(row.email) !== '' || stringValue(row.phone) !== '';
+				case 'candidate_interests':
+					return numberValue(row.interest_id) > 0 || stringValue(row.name) !== '' || stringValue(row.interest_key) !== '';
+				case 'pending_findings':
+					return stringValue(row.summary) !== '' || stringValue(row.category) !== '';
+				case 'photo_evidence_candidates':
+					return stringValue(row.source_url) !== '' || stringValue(row.evidence_url) !== '';
+				default:
+					return this.hasMeaningfulStructuredData(row);
+			}
 		},
 
 		async requestCleanup(reason, cleanupScope = 'task') {
@@ -801,9 +854,12 @@
 			try {
 				const response = await fetch(this._getRestUrl('tracer/cleanup-run'), {
 					method: 'POST',
+					cache: 'no-store',
 					headers: {
 						'Content-Type': 'application/json',
 						'X-WP-Nonce': this._getNonce(),
+						'Cache-Control': 'no-cache',
+						'Pragma': 'no-cache',
 					},
 					body: JSON.stringify({
 						task_id: this.taskId,
@@ -813,6 +869,7 @@
 						cleanup_scope: cleanupScope,
 					})
 				});
+				this.recordCacheStatus('cleanup_run', response);
 
 				if (!response.ok) {
 					this.addLog('warning', `AI cleanup sa nepodaril (HTTP ${response.status})`);
@@ -833,6 +890,37 @@
 			} catch (error) {
 				this.addLog('warning', `AI cleanup výnimka: ${error.message}`);
 			}
+		},
+
+		recordCacheStatus(stepKey, response) {
+			if (!response || !response.headers) {
+				return;
+			}
+
+			const info = {
+				xLiteSpeedCache: response.headers.get('x-litespeed-cache') || '',
+				xLiteSpeedCacheControl: response.headers.get('x-litespeed-cache-control') || '',
+				xCache: response.headers.get('x-cache') || '',
+				cfCacheStatus: response.headers.get('cf-cache-status') || '',
+				age: response.headers.get('age') || '',
+				cacheControl: response.headers.get('cache-control') || '',
+				pragma: response.headers.get('pragma') || '',
+				expires: response.headers.get('expires') || '',
+			};
+
+			this.cacheDiagnostics[stepKey] = info;
+			this.addLog('info', `Cache ${stepKey}: ${this.formatCacheSummary(info)}`);
+		},
+
+		formatCacheSummary(info) {
+			if (!info || typeof info !== 'object') {
+				return 'N/A';
+			}
+
+			const status = info.xLiteSpeedCache || info.cfCacheStatus || info.xCache || 'unknown';
+			const age = info.age ? `age=${info.age}` : 'age=n/a';
+			const control = info.cacheControl || info.xLiteSpeedCacheControl || 'cache-control=n/a';
+			return `${status}; ${age}; ${control}`;
 		},
 
 	_getRestUrl(endpoint) {

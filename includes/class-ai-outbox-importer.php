@@ -574,11 +574,15 @@ class Toptour_Ref_AI_Outbox_Importer {
 			}
 
 			$url = esc_url_raw( (string) ( $row['url'] ?? '' ) );
+			if ( '' !== $url && self::is_placeholder_url( $url ) ) {
+				$result['errors']++;
+				continue;
+			}
 			$title = sanitize_text_field( (string) ( $row['title'] ?? '' ) );
 			if ( '' === $title ) {
 				$title = self::fallback_title_from_url( $url );
 			}
-			if ( '' === $title ) {
+			if ( '' === $title || ! self::has_meaningful_text( $title, 3 ) ) {
 				$result['errors']++;
 				continue;
 			}
@@ -681,6 +685,10 @@ class Toptour_Ref_AI_Outbox_Importer {
 				$result['errors']++;
 				continue;
 			}
+			if ( '' !== $name && ! self::has_meaningful_text( $name, 3 ) ) {
+				$result['errors']++;
+				continue;
+			}
 
 			$input = [
 				'name' => $name,
@@ -744,6 +752,10 @@ class Toptour_Ref_AI_Outbox_Importer {
 			$destination_id = absint( $row['destination_id'] ?? 0 );
 			$name = sanitize_text_field( (string) ( $row['name'] ?? '' ) );
 			if ( $destination_id <= 0 && '' === $name ) {
+				$result['errors']++;
+				continue;
+			}
+			if ( '' !== $name && ! self::has_meaningful_text( $name, 3 ) ) {
 				$result['errors']++;
 				continue;
 			}
@@ -815,6 +827,10 @@ class Toptour_Ref_AI_Outbox_Importer {
 			$poi_id = absint( $row['poi_id'] ?? 0 );
 			$name = sanitize_text_field( (string) ( $row['name'] ?? '' ) );
 			if ( $poi_id <= 0 && '' === $name ) {
+				$result['errors']++;
+				continue;
+			}
+			if ( '' !== $name && ! self::has_meaningful_text( $name, 3 ) ) {
 				$result['errors']++;
 				continue;
 			}
@@ -891,6 +907,10 @@ class Toptour_Ref_AI_Outbox_Importer {
 			$contact_id = absint( $row['contact_id'] ?? 0 );
 			$display_name = sanitize_text_field( (string) ( $row['display_name'] ?? '' ) );
 			if ( $contact_id <= 0 && '' === $display_name ) {
+				$result['errors']++;
+				continue;
+			}
+			if ( '' !== $display_name && ! self::has_meaningful_text( $display_name, 3 ) ) {
 				$result['errors']++;
 				continue;
 			}
@@ -971,7 +991,7 @@ class Toptour_Ref_AI_Outbox_Importer {
 			if ( '' === $interest_key ) {
 				$interest_key = sanitize_title( $name );
 			}
-			if ( '' === $interest_key || '' === $name ) {
+			if ( '' === $interest_key || '' === $name || ! self::has_meaningful_text( $name, 3 ) || self::is_placeholder_text( $interest_key ) ) {
 				$result['errors']++;
 				continue;
 			}
@@ -1048,7 +1068,7 @@ class Toptour_Ref_AI_Outbox_Importer {
 			$target_id = $facility_id > 0 ? $facility_id : $destination_id;
 
 			$summary = sanitize_textarea_field( (string) ( $row['summary'] ?? '' ) );
-			if ( '' === $summary ) {
+			if ( '' === $summary || ! self::has_meaningful_text( $summary, 10 ) ) {
 				$result['errors']++;
 				continue;
 			}
@@ -1185,6 +1205,10 @@ class Toptour_Ref_AI_Outbox_Importer {
 				$result['errors']++;
 				continue;
 			}
+			if ( self::is_placeholder_url( $source_url ) ) {
+				$result['errors']++;
+				continue;
+			}
 
 			$legacy_source_id = absint( $row['source_id'] ?? 0 );
 			$source_id = $legacy_source_id > 0 && isset( $source_map[ $legacy_source_id ] ) ? absint( $source_map[ $legacy_source_id ] ) : absint( $legacy_source_id );
@@ -1245,7 +1269,10 @@ class Toptour_Ref_AI_Outbox_Importer {
 
 			$evidence_title = sanitize_text_field( (string) ( $row['evidence_title'] ?? '' ) );
 			if ( '' === $evidence_title ) {
-				$evidence_title = 'AI photo evidence candidate';
+				$evidence_title = self::fallback_title_from_url( $source_url );
+			}
+			if ( '' === $evidence_title ) {
+				$evidence_title = 'Photo evidence candidate';
 			}
 
 			$observation_summary = sanitize_textarea_field( (string) ( $row['observation_summary'] ?? '' ) );
@@ -1254,6 +1281,15 @@ class Toptour_Ref_AI_Outbox_Importer {
 			}
 			$visible_details = sanitize_textarea_field( (string) ( $row['visible_details'] ?? '' ) );
 			$contradiction_note = sanitize_textarea_field( (string) ( $row['contradiction_note'] ?? '' ) );
+
+			if ( ! self::has_meaningful_text( $observation_summary, 10 ) && ! self::has_meaningful_text( $visible_details, 10 ) ) {
+				$result['errors']++;
+				continue;
+			}
+			if ( ! self::has_meaningful_text( $evidence_title, 4 ) ) {
+				$result['errors']++;
+				continue;
+			}
 
 			$input = [
 				'evidence_title' => $evidence_title,
@@ -1401,6 +1437,107 @@ class Toptour_Ref_AI_Outbox_Importer {
 			return $original;
 		}
 		return $original . "\n" . $extra;
+	}
+
+	private static function has_meaningful_text( $text, $min_len = 2 ) {
+		$text = trim( sanitize_text_field( (string) $text ) );
+		if ( '' === $text ) {
+			return false;
+		}
+
+		$min_len = max( 1, absint( $min_len ) );
+		$length = function_exists( 'mb_strlen' ) ? mb_strlen( $text ) : strlen( $text );
+		if ( $length < $min_len ) {
+			return false;
+		}
+
+		return ! self::is_placeholder_text( $text );
+	}
+
+	private static function is_placeholder_text( $text ) {
+		$text = self::normalize_text_for_dedupe( $text );
+		if ( '' === $text ) {
+			return true;
+		}
+
+		$exact = [
+			'n a',
+			'na',
+			'none',
+			'null',
+			'tbd',
+			'todo',
+			'unknown',
+			'placeholder',
+			'demo',
+			'sample',
+			'example',
+			'test',
+			'nezname',
+			'neznamy',
+			'nezistene',
+			'neuvedene',
+			'doplnit',
+			'doplni',
+			'bez nazvu',
+			'photo evidence candidate',
+			'ai photo evidence candidate',
+		];
+
+		if ( in_array( $text, $exact, true ) ) {
+			return true;
+		}
+
+		if ( false !== strpos( $text, 'lorem ipsum' ) ) {
+			return true;
+		}
+
+		if ( preg_match( '/^(demo|sample|placeholder|test|candidate|item|record)[\s\-_#0-9]*$/u', $text ) ) {
+			return true;
+		}
+
+		return false;
+	}
+
+	private static function is_placeholder_url( $url ) {
+		$url = esc_url_raw( (string) $url );
+		if ( '' === $url ) {
+			return false;
+		}
+
+		$host = wp_parse_url( $url, PHP_URL_HOST );
+		if ( ! is_string( $host ) || '' === $host ) {
+			return true;
+		}
+
+		$host = preg_replace( '/^www\./i', '', strtolower( $host ) );
+		if ( ! is_string( $host ) || '' === $host ) {
+			return true;
+		}
+
+		$blocked_hosts = [
+			'example.com',
+			'test.com',
+			'localhost',
+			'127.0.0.1',
+			'0.0.0.0',
+		];
+
+		if ( in_array( $host, $blocked_hosts, true ) ) {
+			return true;
+		}
+
+		if ( false !== strpos( $host, 'example' ) || false !== strpos( $host, 'placeholder' ) || false !== strpos( $host, 'invalid' ) ) {
+			return true;
+		}
+
+		$path = wp_parse_url( $url, PHP_URL_PATH );
+		$path = is_string( $path ) ? strtolower( $path ) : '';
+		if ( '' !== $path && ( false !== strpos( $path, 'placeholder' ) || false !== strpos( $path, 'sample' ) || false !== strpos( $path, 'demo' ) ) ) {
+			return true;
+		}
+
+		return false;
 	}
 
 	private static function find_existing_source_id( $url ) {

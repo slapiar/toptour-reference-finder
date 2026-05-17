@@ -25,6 +25,9 @@ class Toptour_Ref_Debug_Tracer_API {
 	 * @return void
 	 */
 	public static function register_routes() {
+		add_filter( 'rest_post_dispatch', array( __CLASS__, 'disable_cache_for_tracer_responses' ), 10, 3 );
+		add_filter( 'rest_pre_serve_request', array( __CLASS__, 'send_no_cache_headers_for_tracer' ), 10, 4 );
+
 		// Initialize tracer run
 		register_rest_route(
 			self::NAMESPACE,
@@ -163,6 +166,44 @@ class Toptour_Ref_Debug_Tracer_API {
 	 */
 	public static function check_permissions() {
 		return current_user_can( 'manage_toptour_references' );
+	}
+
+	public static function disable_cache_for_tracer_responses( $response, $server, $request ) {
+		if ( ! self::is_tracer_route_request( $request ) ) {
+			return $response;
+		}
+
+		if ( $response instanceof WP_REST_Response ) {
+			$response->header( 'Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0' );
+			$response->header( 'Pragma', 'no-cache' );
+			$response->header( 'Expires', '0' );
+			$response->header( 'X-LiteSpeed-Cache-Control', 'no-cache' );
+		}
+
+		return $response;
+	}
+
+	public static function send_no_cache_headers_for_tracer( $served, $result, $request, $server ) {
+		if ( ! self::is_tracer_route_request( $request ) ) {
+			return $served;
+		}
+
+		nocache_headers();
+		header( 'Cache-Control: no-store, no-cache, must-revalidate, max-age=0' );
+		header( 'Pragma: no-cache' );
+		header( 'Expires: 0' );
+		header( 'X-LiteSpeed-Cache-Control: no-cache' );
+
+		return $served;
+	}
+
+	private static function is_tracer_route_request( $request ) {
+		if ( ! is_object( $request ) || ! method_exists( $request, 'get_route' ) ) {
+			return false;
+		}
+
+		$route = (string) $request->get_route();
+		return 0 === strpos( $route, '/' . self::NAMESPACE . '/tracer/' );
 	}
 
 	/**
