@@ -331,12 +331,81 @@ class Toptour_Ref_AI_Outbox_Importer {
 	}
 
 	private static function import_structured_output( $task_id, $run_id, $payload, $structured ) {
+		$task_context = is_array( $payload['input']['context']['task'] ?? null ) ? $payload['input']['context']['task'] : [];
+		$task_title = sanitize_text_field( (string) ( $task_context['title'] ?? '' ) );
+		$task_question = sanitize_textarea_field( (string) ( $payload['input']['question'] ?? '' ) );
+		$answer_summary = sanitize_text_field( (string) ( $structured['answer_summary'] ?? '' ) );
+		$task_context_note = trim( implode( "\n", array_filter( [
+			'' !== $task_title ? 'Task: ' . $task_title : '',
+			'' !== $task_question ? 'Query: ' . self::trim_text( $task_question, 280 ) : '',
+			'' !== $answer_summary ? 'AI summary: ' . $answer_summary : '',
+		] ) ) );
+
 		$photo_rows = is_array( $structured['photo_evidence_candidates'] ?? null ) ? $structured['photo_evidence_candidates'] : [];
 		$source_rows = is_array( $structured['candidate_sources'] ?? null ) ? $structured['candidate_sources'] : [];
 		$finding_rows = is_array( $structured['pending_findings'] ?? null ) ? $structured['pending_findings'] : [];
 
 		$source_rows = array_merge( $source_rows, self::build_candidate_sources_from_photo_rows( $task_id, $photo_rows ) );
 		$finding_rows = array_merge( $finding_rows, self::build_pending_findings_from_photo_rows( $photo_rows ) );
+
+		$source_rows = self::enrich_rows_with_notes(
+			$source_rows,
+			static function ( $row ) use ( $task_context_note ) {
+				$title = sanitize_text_field( (string) ( $row['title'] ?? $row['source_title'] ?? '' ) );
+				$url = esc_url_raw( (string) ( $row['url'] ?? $row['source_url'] ?? '' ) );
+				$lines = [];
+				if ( '' !== $title ) {
+					$lines[] = 'Candidate source: ' . $title;
+				}
+				if ( '' !== $url ) {
+					$lines[] = 'URL: ' . $url;
+				}
+				if ( '' !== $task_context_note ) {
+					$lines[] = $task_context_note;
+				}
+				return self::ensure_notes_on_row( $row, $lines );
+			}
+		);
+
+		$finding_rows = self::enrich_rows_with_notes(
+			$finding_rows,
+			static function ( $row ) use ( $task_context_note, $answer_summary ) {
+				$summary = sanitize_textarea_field( (string) ( $row['summary'] ?? '' ) );
+				$category = sanitize_text_field( (string) ( $row['category'] ?? '' ) );
+				$lines = [];
+				if ( '' !== $category ) {
+					$lines[] = 'Finding category: ' . $category;
+				}
+				if ( '' !== $summary ) {
+					$lines[] = 'Summary: ' . self::trim_text( $summary, 260 );
+				}
+				if ( '' !== $answer_summary ) {
+					$lines[] = 'AI summary: ' . $answer_summary;
+				}
+				if ( '' !== $task_context_note ) {
+					$lines[] = $task_context_note;
+				}
+				return self::ensure_notes_on_row( $row, $lines );
+			}
+		);
+
+		$photo_rows = self::enrich_rows_with_notes(
+			$photo_rows,
+			static function ( $row ) use ( $task_context_note, $answer_summary ) {
+				$source_url = esc_url_raw( (string) ( $row['source_url'] ?? $row['evidence_url'] ?? '' ) );
+				$lines = [];
+				if ( '' !== $source_url ) {
+					$lines[] = 'Photo evidence URL: ' . $source_url;
+				}
+				if ( '' !== $answer_summary ) {
+					$lines[] = 'AI summary: ' . $answer_summary;
+				}
+				if ( '' !== $task_context_note ) {
+					$lines[] = $task_context_note;
+				}
+				return self::ensure_notes_on_row( $row, $lines );
+			}
+		);
 
 		$source_result = self::import_candidate_sources( $task_id, $source_rows );
 		$facility_result = self::import_candidate_facilities( $structured['candidate_facilities'] ?? [] );
@@ -1425,6 +1494,52 @@ class Toptour_Ref_AI_Outbox_Importer {
 			return mb_substr( $text, 0, $limit );
 		}
 		return substr( $text, 0, $limit );
+	}
+
+	private static function enrich_rows_with_notes( $rows, $row_callback ) {
+		if ( ! is_array( $rows ) || ! is_callable( $row_callback ) ) {
+			return is_array( $rows ) ? $rows : [];
+		}
+
+		$enriched = [];
+		foreach ( $rows as $row ) {
+			if ( ! is_array( $row ) ) {
+				continue;
+			}
+			$enriched[] = call_user_func( $row_callback, $row );
+		}
+
+		return $enriched;
+	}
+
+	private static function ensure_notes_on_row( $row, $lines ) {
+		if ( ! is_array( $row ) ) {
+			return [];
+		}
+
+		$notes = sanitize_textarea_field( (string) ( $row['notes'] ?? '' ) );
+		if ( '' !== trim( $notes ) ) {
+			$row['notes'] = $notes;
+			return $row;
+		}
+
+		$lines = array_values(
+			array_filter(
+				array_map(
+					static function ( $line ) {
+						$line = trim( sanitize_textarea_field( (string) $line ) );
+						return '' !== $line ? $line : null;
+					},
+					is_array( $lines ) ? $lines : []
+				)
+			)
+		);
+
+		if ( ! empty( $lines ) ) {
+			$row['notes'] = implode( "\n", $lines );
+		}
+
+		return $row;
 	}
 
 	private static function append_note( $original, $extra ) {
